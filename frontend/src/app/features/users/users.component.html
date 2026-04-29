@@ -1,0 +1,306 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Kullanıcılar</h1>
+      <p>Şirket çalışanlarını yönet — rol, takım, hiyerarşi</p>
+    </div>
+    <button class="btn-primary" (click)="startCreate()">
+      <lucide-icon [img]="icons.UserPlus" size="13"></lucide-icon>
+      Yeni kullanıcı
+    </button>
+  </header>
+
+  <!-- ============== Filters ============== -->
+  <section class="filter-bar">
+    <div class="search-wrap">
+      <lucide-icon [img]="icons.Search" size="13" class="search-icon"></lucide-icon>
+      <input
+        type="text"
+        class="search"
+        placeholder="Ad / email / account_id ara..."
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+    </div>
+    <select class="dropdown" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+      <option [ngValue]="null">Tüm roller</option>
+      @for (r of roles.list(); track r.id) {
+        <option [ngValue]="r.id">{{ r.name }}</option>
+      }
+    </select>
+    <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
+      <option [ngValue]="null">Tüm takımlar</option>
+      @for (t of teams.list(); track t.id) {
+        <option [ngValue]="t.id">{{ t.name }}</option>
+      }
+    </select>
+    <select class="dropdown" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+      <option value="active">Aktif</option>
+      <option value="inactive">Pasif</option>
+      <option value="all">Hepsi</option>
+    </select>
+    <span class="result-count">{{ items().length }} kullanıcı</span>
+  </section>
+
+  <!-- ============== Table ============== -->
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Account ID</th>
+            <th>İsim / E-posta</th>
+            <th>Pozisyon</th>
+            <th>Rol</th>
+            <th>Takım</th>
+            <th>Yönetici</th>
+            <th>Durum</th>
+            <th>Eklendi</th>
+            <th class="actions-col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="9" class="state">Yükleniyor...</td></tr>
+          } @else if (items().length === 0) {
+            <tr><td colspan="9" class="state">Eşleşen kullanıcı yok</td></tr>
+          } @else {
+            @for (u of items(); track u.id) {
+              <tr [class.inactive]="!u.isActive" (click)="selectUser(u)">
+                <td><span class="acc-id">{{ u.accountId }}</span></td>
+                <td>
+                  <div class="name-cell">
+                    <span class="name">{{ u.name }}</span>
+                    <span class="email">{{ u.email }}</span>
+                  </div>
+                </td>
+                <td class="position">{{ u.position || '—' }}</td>
+                <td>
+                  <span class="role-pill" [class]="'role-' + roleCodeFor(u.roleId).toLowerCase()">
+                    {{ roleLabel(u.roleId) }}
+                  </span>
+                </td>
+                <td>{{ teamName(u.teamId) }}</td>
+                <td class="manager">{{ managerName(u.managerAccountId) }}</td>
+                <td>
+                  @if (u.isActive) {
+                    <span class="status-pill active">Aktif</span>
+                  } @else {
+                    <span class="status-pill inactive">Pasif</span>
+                  }
+                </td>
+                <td class="created">{{ formatDate(u.createdAt) }}</td>
+                <td class="actions-col" (click)="$event.stopPropagation()">
+                  <button class="icon-btn" (click)="selectUser(u)" title="Düzenle">
+                    <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
+                  </button>
+                  @if (isAdmin() && u.isActive) {
+                    <button class="icon-btn warn" (click)="selectedId.set(u.id); openPasswordReset()" title="Parola sıfırla">
+                      <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
+                    </button>
+                  }
+                  @if (u.isActive) {
+                    <button class="icon-btn danger" (click)="askDelete(u.id)" title="Pasif et">
+                      <lucide-icon [img]="icons.Trash2" size="12"></lucide-icon>
+                    </button>
+                  } @else {
+                    <button class="icon-btn success" (click)="selectedId.set(u.id); reactivate()" title="Yeniden aktif">
+                      <lucide-icon [img]="icons.Power" size="12"></lucide-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============== Create / Edit dialog ============== -->
+  @if (dialogOpen()) {
+    <div class="modal-overlay" (click)="closeDialog()"></div>
+    <div class="modal" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <div>
+          <div class="modal-title">
+            {{ creating() ? 'Yeni kullanıcı' : selected()?.name }}
+          </div>
+          @if (!creating() && selected(); as s) {
+            <div class="modal-sub">
+              <span class="acc-id">{{ s.accountId }}</span>
+              <span class="dot-sep">·</span>
+              <span [class.muted-red]="!s.isActive">{{ s.isActive ? 'Aktif' : 'Pasif' }}</span>
+            </div>
+          }
+        </div>
+        <button class="x" (click)="closeDialog()" aria-label="Kapat">
+          <lucide-icon [img]="icons.X" size="14"></lucide-icon>
+        </button>
+      </header>
+
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="field">
+            <label>Account ID *</label>
+            <input
+              type="text"
+              class="input"
+              [readonly]="!creating()"
+              [ngModel]="form().accountId"
+              (ngModelChange)="patch('accountId', ($event || '').toUpperCase())"
+              placeholder="örn. EMP500"
+            />
+          </div>
+          <div class="field">
+            <label>Email *</label>
+            <input
+              type="email"
+              class="input"
+              [ngModel]="form().email"
+              (ngModelChange)="patch('email', $event)"
+              placeholder="ornek@company.com"
+            />
+          </div>
+          <div class="field">
+            <label>İsim soyisim *</label>
+            <input
+              type="text"
+              class="input"
+              [ngModel]="form().name"
+              (ngModelChange)="patch('name', $event)"
+            />
+          </div>
+          <div class="field">
+            <label>Pozisyon</label>
+            <input
+              type="text"
+              class="input"
+              [ngModel]="form().position"
+              (ngModelChange)="patch('position', $event)"
+              placeholder="örn. Senior Developer"
+            />
+          </div>
+          @if (creating()) {
+            <div class="field">
+              <label>Parola *</label>
+              <input
+                type="password"
+                class="input"
+                [ngModel]="form().password"
+                (ngModelChange)="patch('password', $event)"
+                placeholder="En az 6 karakter"
+              />
+            </div>
+          }
+          <div class="field">
+            <label>Rol *</label>
+            <select
+              class="input"
+              [ngModel]="form().roleId"
+              (ngModelChange)="patch('roleId', $event)"
+            >
+              <option [ngValue]="null">Seç...</option>
+              @for (r of roles.list(); track r.id) {
+                <option [ngValue]="r.id">{{ r.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label>Takım</label>
+            <select
+              class="input"
+              [ngModel]="form().teamId"
+              (ngModelChange)="patch('teamId', $event)"
+            >
+              <option [ngValue]="null">—</option>
+              @for (t of teams.list(); track t.id) {
+                <option [ngValue]="t.id">{{ t.name }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label>Yönetici</label>
+            <select
+              class="input"
+              [ngModel]="form().managerAccountId"
+              (ngModelChange)="patch('managerAccountId', $event)"
+            >
+              <option [ngValue]="null">—</option>
+              @for (m of possibleManagers(); track m.id) {
+                <option [ngValue]="m.accountId">{{ m.name }} ({{ m.accountId }})</option>
+              }
+            </select>
+          </div>
+          <div class="field row">
+            <label class="checkbox-row">
+              <input
+                type="checkbox"
+                [ngModel]="form().isActive"
+                (ngModelChange)="patch('isActive', $event)"
+              />
+              Aktif
+            </label>
+          </div>
+        </div>
+
+        @if (!creating() && selected(); as s) {
+          <div class="modal-extra">
+            @if (isAdmin() && s.isActive) {
+              <button class="btn-warn" (click)="openPasswordReset()">
+                <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
+                Parolayı sıfırla
+              </button>
+            }
+            @if (s.isActive) {
+              <button class="btn-danger" (click)="askDelete(s.id)">
+                <lucide-icon [img]="icons.Trash2" size="12"></lucide-icon>
+                Soft delete
+              </button>
+            } @else {
+              <button class="btn-success" (click)="reactivate()">
+                <lucide-icon [img]="icons.Power" size="12"></lucide-icon>
+                Yeniden aktif et
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="closeDialog()">İptal</button>
+        <button
+          class="btn-primary"
+          [disabled]="saving() || (!creating() && !isDirty())"
+          (click)="save()"
+        >
+          <lucide-icon [img]="icons.Save" size="13"></lucide-icon>
+          {{ creating() ? 'Oluştur' : 'Kaydet' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDeleteId() !== null) {
+    <app-confirm-dialog
+      title="Kullanıcıyı pasif et"
+      message="Kullanıcı listede pasif olarak gösterilecek. Workload kayıtları korunacak."
+      confirmLabel="Pasif et"
+      [danger]="true"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    />
+  }
+
+  @if (resetPasswordTarget(); as t) {
+    <app-password-reset-dialog
+      [targetName]="t.name"
+      (confirm)="applyPasswordReset($event)"
+      (cancel)="cancelPasswordReset()"
+    />
+  }
+</div>

@@ -1,0 +1,52 @@
+@if (currentUser(); as user) {
+  <div class="topnav">
+    <div class="left">
+      <div class="brand">
+        <div class="brand-logo">W</div>
+        <span class="brand-name">Workload</span>
+      </div>
+      <nav class="menu">
+        @for (item of menu(); track item.key) {
+          <a
+            class="menu-item"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+          >
+            <lucide-icon [img]="item.icon" size="13"></lucide-icon>
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+    </div>
+
+    <div class="right">
+      <div class="role-chip">{{ roleLabel() }}</div>
+
+      <button type="button" class="profile-btn" (click)="toggleProfile()">
+        <span class="avatar">{{ initials() }}</span>
+        <span class="first-name">{{ firstName() }}</span>
+      </button>
+
+      @if (profileOpen()) {
+        <div class="profile-overlay" (click)="closeProfile()"></div>
+        <div class="profile-popover">
+          <div class="profile-head">
+            <div class="profile-name">{{ user.name }}</div>
+            <div class="profile-email">{{ user.email }}</div>
+            <div class="profile-tags">
+              <span class="tag tag-teal">{{ roleLabel() }}</span>
+            </div>
+            @if (user.position) {
+              <div class="profile-position">{{ user.position }}</div>
+            }
+            <div class="profile-id">ID: {{ user.accountId }}</div>
+          </div>
+          <button type="button" class="logout-btn" (click)="logout()">
+            <lucide-icon [img]="logOutIcon" size="13"></lucide-icon>
+            Çıkış yap
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

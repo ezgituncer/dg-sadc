@@ -1,0 +1,37 @@
+/* Design tokens — mirrors the `C` palette in mockup/workload-app.jsx */
+:root {
+  --c-bg: #0A1628;
+  --c-surface: #0F1F3A;
+  --c-surface-hover: #142847;
+  --c-surface-deep: #081020;
+  --c-border: rgba(148, 163, 184, 0.12);
+  --c-border-hover: rgba(45, 212, 191, 0.4);
+  --c-border-focus: #2DD4BF;
+  --c-text-primary: #F1F5F9;
+  --c-text-secondary: #94A3B8;
+  --c-text-muted: #64748B;
+  --c-teal: #2DD4BF;
+  --c-blue: #3B82F6;
+  --c-purple: #A78BFA;
+  --c-amber: #F59E0B;
+  --c-pink: #EC4899;
+  --c-green: #10B981;
+  --c-red: #EF4444;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: var(--c-text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin { animation: spin 0.8s linear infinite; }

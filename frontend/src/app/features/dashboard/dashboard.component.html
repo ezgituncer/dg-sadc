@@ -1,0 +1,139 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p>Şirket organizasyon ağacı (yukarıdan aşağı)</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="num">{{ stats().total }}</span> aktif kullanıcı</div>
+      <div class="stat"><span class="num">{{ stats().managers }}</span> yönetici</div>
+      <div class="stat"><span class="num">{{ stats().techLeads }}</span> tech lead</div>
+      <div class="stat"><span class="num">{{ stats().workers }}</span> çalışan</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Org tree -->
+    <section class="tree-card">
+      @if (loading()) {
+        <div class="state">Yükleniyor...</div>
+      } @else if (roots().length === 0) {
+        <div class="state">Henüz kullanıcı yok</div>
+      } @else {
+        <div class="tree-scroll">
+          <div class="tree" [class.has-multiple-roots]="roots().length > 1">
+            @for (root of roots(); track root.user.accountId) {
+              <ng-container *ngTemplateOutlet="orgNode; context: { $implicit: root }"></ng-container>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- Aside: HR + QA team -->
+    <aside class="side">
+      <div class="side-card">
+        <div class="side-head">
+          <span class="dot" style="background: var(--c-amber);"></span>
+          HR
+          <span class="count">{{ hrUsers().length }}</span>
+        </div>
+        @if (hrUsers().length === 0) {
+          <div class="side-empty">Henüz HR yok</div>
+        } @else {
+          <div class="side-list">
+            @for (u of hrUsers(); track u.id) {
+              <div class="side-row">
+                <div class="side-info">
+                  <div class="side-name">{{ u.name }}</div>
+                  <div class="side-meta">{{ u.position || u.email }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="side-card">
+        <div class="side-head">
+          <span class="dot" style="background: var(--c-pink);"></span>
+          QA Takımı
+          <span class="count">{{ qaUsers().length }}</span>
+        </div>
+        @if (qaUsers().length === 0) {
+          <div class="side-empty">Henüz QA çalışanı yok</div>
+        } @else {
+          <div class="side-list">
+            @for (u of qaUsers(); track u.id) {
+              <div class="side-row">
+                <div class="side-info">
+                  <div class="side-name">
+                    {{ u.name }}
+                    @if (u.roleCode === 'QA_SPECIALIST') {
+                      <span class="role-tag tag-pink">QA-LEAD</span>
+                    }
+                  </div>
+                  <div class="side-meta">{{ u.position || u.email }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Recursive top-down org-node template -->
+<ng-template #orgNode let-node>
+  <div class="org-node">
+    <div class="org-block">
+      <div class="org-card" [style.--accent]="roleColor(node.user.roleCode)">
+        <div class="org-info">
+          <div class="org-name">{{ node.user.name }}</div>
+          <div class="org-meta">
+            <span class="role-pill"
+                  [style.background]="roleColor(node.user.roleCode) + '24'"
+                  [style.color]="roleColor(node.user.roleCode)">{{ roleLabel(node.user.roleCode) }}</span>
+            @if (teamName(node.user.teamId)) {
+              <span class="team-pill">{{ teamName(node.user.teamId) }}</span>
+            }
+          </div>
+          @if (node.user.position) {
+            <div class="org-position">{{ node.user.position }}</div>
+          }
+        </div>
+      </div>
+
+      <!-- Roster: tech leads + workers under this node -->
+      @if (rosterReports(node).length > 0) {
+        <div class="roster" [style.--accent]="roleColor(node.user.roleCode)">
+          <div class="roster-head">
+            <span class="roster-label">Takım</span>
+            <span class="roster-count">{{ rosterReports(node).length }}</span>
+          </div>
+          <ul class="roster-list">
+            @for (m of rosterReports(node); track m.user.accountId) {
+              <li class="roster-item" [class.is-tl]="m.user.roleCode === 'TECH_LEAD'">
+                <span class="roster-name" [title]="m.user.position || ''">{{ m.user.name }}</span>
+                @if (m.user.roleCode === 'TECH_LEAD') {
+                  <span class="role-tag tag-teal">TL</span>
+                }
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+
+    @if (branchReports(node).length > 0) {
+      <div class="org-children" [class.single-child]="branchReports(node).length === 1">
+        @for (child of branchReports(node); track child.user.accountId) {
+          <div class="org-child">
+            <ng-container *ngTemplateOutlet="orgNode; context: { $implicit: child }"></ng-container>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ng-template>

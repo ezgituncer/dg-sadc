@@ -1,0 +1,327 @@
+<div class="page">
+  <header class="page-head">
+    <h1>Workload girişi</h1>
+    <p>Günlük çalışmalarını kaydet</p>
+  </header>
+
+  <div class="layout">
+    <!-- ========================== FORM ========================== -->
+    <section class="form-card">
+      <!-- Date picker -->
+      <div class="date-bar" [class.locked]="dateLocked()">
+        <lucide-icon [img]="icons.Calendar" size="18" [class.locked]="dateLocked()"></lucide-icon>
+        <div class="date-bar-text">
+          <div class="label">Çalışma tarihi</div>
+          <input
+            type="date"
+            [ngModel]="date()"
+            (ngModelChange)="setDate($event)"
+            class="date-input"
+          />
+        </div>
+        @if (date() !== today) {
+          <button type="button" class="btn-today" (click)="goToday()">Bugün</button>
+        }
+      </div>
+
+      @if (dateLocked()) {
+        <div class="banner amber">
+          <lucide-icon [img]="icons.AlertCircle" size="13"></lucide-icon>
+          Bu tarih 30 günden eski. Yeni giriş yapılamaz, mevcut kayıtlar düzenlenemez.
+        </div>
+      }
+
+      @if (editingId() !== null) {
+        <div class="banner teal-banner">
+          <span class="row">
+            <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
+            Kayıt düzenleme modu
+          </span>
+          <button type="button" class="link-btn" (click)="resetForm()">Yeni kayda dön</button>
+        </div>
+      }
+
+      <!-- Activity type -->
+      <div class="field">
+        <div class="field-label">
+          <lucide-icon [img]="icons.Activity" size="12"></lucide-icon>
+          Activity type <span class="req">*</span>
+        </div>
+        <div class="segment">
+          @for (opt of activityOptions(); track opt.value) {
+            <button
+              type="button"
+              class="segment-btn"
+              [class.active]="form().activityTypeId === opt.value"
+              [style.--seg-color]="opt.color"
+              (click)="onActivityTypeChange(opt.value)"
+            >
+              <span class="segment-dot" [style.background]="opt.color"></span>
+              {{ opt.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Category & Project -->
+      <div class="grid-2">
+        <div class="field">
+          <div class="field-label">
+            <lucide-icon [img]="icons.Tag" size="12"></lucide-icon>
+            Kategori <span class="req">*</span>
+          </div>
+          <select
+            class="select"
+            [disabled]="!form().activityTypeId"
+            [ngModel]="form().categoryId"
+            (ngModelChange)="patch('categoryId', $event)"
+          >
+            <option [ngValue]="null">
+              {{ form().activityTypeId ? 'Kategori seç...' : 'Önce activity type seç' }}
+            </option>
+            @for (cat of categoryOptions(); track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}</option>
+            }
+          </select>
+        </div>
+
+        @if (isProjectActivity()) {
+          <div class="field">
+            <div class="field-label">
+              <lucide-icon [img]="icons.FolderOpen" size="12"></lucide-icon>
+              Proje <span class="req">*</span>
+            </div>
+            <select
+              class="select"
+              [ngModel]="form().projectId"
+              (ngModelChange)="patch('projectId', $event)"
+            >
+              <option [ngValue]="null">Proje seç...</option>
+              @for (proj of projectOptions(); track proj.id) {
+                <option [ngValue]="proj.id">{{ proj.name }} — {{ proj.code }}</option>
+              }
+            </select>
+          </div>
+        } @else {
+          <div></div>
+        }
+
+        <div class="field">
+          <div class="field-label">
+            <lucide-icon [img]="icons.Layers" size="12"></lucide-icon>
+            Task type <span class="req">*</span>
+          </div>
+          <select
+            class="select"
+            [ngModel]="form().taskTypeId"
+            (ngModelChange)="patch('taskTypeId', $event)"
+          >
+            <option [ngValue]="null">Tip seç...</option>
+            @for (t of taskTypeOptions(); track t.id) {
+              <option [ngValue]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <div class="field-label">
+            <lucide-icon [img]="icons.Clock" size="12"></lucide-icon>
+            Hours spent <span class="req">*</span>
+          </div>
+          <input
+            type="number"
+            min="0.25"
+            step="0.25"
+            class="input"
+            placeholder="örn. 2.5"
+            [ngModel]="form().hoursSpent"
+            (ngModelChange)="patch('hoursSpent', $event)"
+          />
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="field">
+        <div class="field-label">
+          <lucide-icon [img]="icons.FileText" size="12"></lucide-icon>
+          Task description <span class="req">*</span>
+        </div>
+        <textarea
+          class="textarea"
+          rows="3"
+          placeholder="Bugün ne üzerinde çalıştın? Detayları yaz..."
+          [ngModel]="form().taskDescription"
+          (ngModelChange)="patch('taskDescription', $event)"
+        ></textarea>
+      </div>
+
+      <!-- Status & Complexity -->
+      <div class="grid-2">
+        <div class="field">
+          <div class="field-label">
+            <lucide-icon [img]="icons.Activity" size="12"></lucide-icon>
+            Status
+          </div>
+          <div class="segment">
+            @for (opt of statusOptions; track opt.value) {
+              <button
+                type="button"
+                class="segment-btn"
+                [class.active]="form().status === opt.value"
+                [style.--seg-color]="opt.color"
+                (click)="patch('status', opt.value)"
+              >
+                <span class="segment-dot" [style.background]="opt.color"></span>
+                {{ opt.label }}
+              </button>
+            }
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Complexity</div>
+          <div class="segment">
+            @for (opt of complexityOptions; track opt.value) {
+              <button
+                type="button"
+                class="segment-btn"
+                [class.active]="form().complexity === opt.value"
+                (click)="patch('complexity', opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Quantity -->
+      <div class="field">
+        <div class="field-label">
+          <lucide-icon [img]="icons.Hash" size="12"></lucide-icon>
+          Quantity
+          <span class="optional">opsiyonel</span>
+        </div>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          class="input"
+          placeholder="örn. 5 (ticket, PR, test case sayısı)"
+          [ngModel]="form().quantity"
+          (ngModelChange)="patch('quantity', $event)"
+        />
+      </div>
+
+      <!-- Submit -->
+      <div class="actions">
+        <button type="button" class="btn-secondary" (click)="resetForm()">Temizle</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [disabled]="!isFormValid() || dateLocked() || submitting()"
+          (click)="submit()"
+        >
+          @if (editingId() !== null) {
+            <lucide-icon [img]="icons.Save" size="14"></lucide-icon> Güncelle
+          } @else {
+            <lucide-icon [img]="icons.Plus" size="14"></lucide-icon> Workload ekle
+          }
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================== RIGHT PANEL ========================== -->
+    <aside class="right-panel">
+      <div class="panel">
+        <div class="panel-label">
+          {{ date() === today ? 'Bugünün özeti' : 'Seçili günün özeti' }}
+        </div>
+        <div class="panel-total">
+          <span class="hours">{{ dayTotalHours().toFixed(1) }}</span>
+          <span class="unit">saat</span>
+          <span class="count">{{ dayEntries().length }} kayıt</span>
+        </div>
+        <div class="bar">
+          @for (entry of dayEntries(); track entry.id) {
+            <div
+              class="bar-seg"
+              [style.width.%]="dayTotalHours() > 0 ? (toNumber(entry.hoursSpent) / dayTotalHours()) * 100 : 0"
+              [style.background]="categoryFor(entry)?.color || 'var(--c-teal)'"
+              [title]="(categoryFor(entry)?.name || '') + ': ' + entry.hoursSpent + 'h'"
+            ></div>
+          }
+        </div>
+        <div class="hint">
+          @if (dayTotalHours() === 0) { Bu gün için kayıt yok }
+          @if (dayTotalHours() > 0 && dayTotalHours() < 8) {
+            <span class="dot amber"></span> 8 saat hedefine {{ (8 - dayTotalHours()).toFixed(1) }} saat kaldı
+          }
+          @if (dayTotalHours() >= 8 && dayTotalHours() < 10) {
+            <span class="dot green"></span> Günlük hedef tamam
+          }
+          @if (dayTotalHours() >= 10) {
+            <span class="dot amber"></span> Fazla mesai: {{ (dayTotalHours() - 8).toFixed(1) }} saat
+          }
+        </div>
+      </div>
+
+      <div class="panel grow">
+        <div class="panel-head">
+          <span class="panel-title">Bu günün girişlerin</span>
+          <span class="panel-count">{{ dayEntries().length }} kayıt</span>
+        </div>
+
+        @if (dayEntries().length === 0) {
+          <div class="empty">
+            Bu gün için workload girişin yok.<br />Soldaki formdan ekle.
+          </div>
+        } @else {
+          <div class="entry-list">
+            @for (entry of dayEntries(); track entry.id) {
+              <div class="entry-row" [class.editing]="editingId() === entry.id">
+                <div class="entry-cat">
+                  <span class="cat-dot" [style.background]="categoryFor(entry)?.color"></span>
+                  {{ categoryFor(entry)?.name || '—' }}
+                </div>
+                <div class="entry-desc">{{ entry.taskDescription }}</div>
+                <div class="entry-meta">
+                  <span>{{ activityFor(entry)?.name }}</span>
+                  @if (projectFor(entry); as p) {
+                    <span>· {{ p.name }}</span>
+                  }
+                  <span>· {{ taskTypeFor(entry)?.name }}</span>
+                  <span class="hours-pill">{{ entry.hoursSpent }}h</span>
+                </div>
+                @if (canEditEntry(entry)) {
+                  <div class="entry-actions">
+                    <button class="icon-btn" (click)="edit(entry)" title="Düzenle">
+                      <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
+                    </button>
+                    <button class="icon-btn danger" (click)="askDelete(entry.id)" title="Sil">
+                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDeleteId() !== null) {
+    <app-confirm-dialog
+      title="Kaydı sil"
+      message="Bu workload kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz."
+      confirmLabel="Sil"
+      [danger]="true"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    />
+  }
+</div>

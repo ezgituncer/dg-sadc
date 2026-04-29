@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: workload_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workload}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workload}
+      POSTGRES_DB: ${POSTGRES_DB:-workload_dev}
+    volumes:
+      - workload_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-workload} -d $${POSTGRES_DB:-workload_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: workload_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-workload}:${POSTGRES_PASSWORD:-workload}@postgres:5432/${POSTGRES_DB:-workload_dev}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-workload}:${POSTGRES_PASSWORD:-workload}@postgres:5432/${POSTGRES_DB:-workload_dev}
+      JWT_SECRET: ${JWT_SECRET:?must be set in production}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      SEED_USERS: ${SEED_USERS:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10/minute}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: workload_web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-80}:80"
+
+volumes:
+  workload_pgdata:

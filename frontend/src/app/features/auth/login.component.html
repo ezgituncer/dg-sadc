@@ -1,0 +1,122 @@
+<div class="login-page">
+  <div class="login-grid">
+    <!-- LEFT: Branding -->
+    <div class="branding">
+      <div class="brand-row">
+        <div class="brand-logo">W</div>
+        <div>
+          <div class="brand-name">Workload</div>
+          <div class="brand-sub">Tracking System</div>
+        </div>
+      </div>
+      <h1 class="brand-headline">
+        Şirket workload <span class="accent">takibi</span> tek panelde
+      </h1>
+      <p class="brand-blurb">
+        Çalışmalarını saat bazında kaydet, takım performansını izle, raporlar oluştur. Tüm
+        şirket genelinde tek bir merkezi sistem.
+      </p>
+      <div class="bullets">
+        <div class="bullet">
+          <span class="dot dot-teal"></span>
+          Saat bazında detaylı workload kaydı
+        </div>
+        <div class="bullet">
+          <span class="dot dot-blue"></span>
+          Takım ve proje bazlı raporlama
+        </div>
+        <div class="bullet">
+          <span class="dot dot-purple"></span>
+          Rol bazlı yetki yönetimi
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Login card -->
+    <div class="card">
+      <div class="card-head">
+        <h2>Giriş yap</h2>
+        <p>Hesabınla devam et</p>
+      </div>
+
+      <form (ngSubmit)="submit()" (keydown.enter)="submit()" autocomplete="on">
+        <div class="field">
+          <label>Email</label>
+          <div class="input-wrap">
+            <lucide-icon [img]="icons.Mail" size="14" class="icon-left"></lucide-icon>
+            <input
+              type="email"
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
+              name="email"
+              autocomplete="username"
+              placeholder="ornek@company.com"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Parola</label>
+          <div class="input-wrap">
+            <lucide-icon [img]="icons.Lock" size="14" class="icon-left"></lucide-icon>
+            <input
+              type="password"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+              name="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+            />
+          </div>
+        </div>
+
+        @if (error()) {
+          <div class="error">
+            <lucide-icon [img]="icons.AlertCircle" size="14"></lucide-icon>
+            {{ error() }}
+          </div>
+        }
+
+        <button type="submit" class="submit" [disabled]="loading()">
+          @if (loading()) {
+            <lucide-icon [img]="icons.Loader2" size="14" class="spin"></lucide-icon>
+            <span>Giriş yapılıyor...</span>
+          } @else {
+            <span>Giriş yap</span>
+          }
+        </button>
+
+        <div class="forgot">
+          Parolanı mı unuttun?
+          <span class="forgot-strong">Yönetici ile iletişime geç.</span>
+        </div>
+      </form>
+
+      @if (showSeedHint) {
+        <div class="hint">
+          <button type="button" class="hint-toggle" (click)="toggleHint()">
+            <span class="amber-dot">●</span>
+            Mock test hesapları {{ hintOpen() ? '▲' : '▼' }}
+          </button>
+          @if (hintOpen()) {
+            <div class="hint-list">
+              @for (account of seedAccounts; track account.email) {
+                <div
+                  class="hint-row"
+                  role="button"
+                  tabindex="0"
+                  (click)="pickSeed(account)"
+                  (keydown.enter)="pickSeed(account)"
+                >
+                  <span [style.color]="account.color">{{ account.email }}</span>
+                  / {{ account.password }}
+                  <span class="muted">({{ account.label }})</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>

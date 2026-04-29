@@ -1,0 +1,257 @@
+:host { display: block; }
+.page { padding: 24px; }
+
+.page-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+}
+.page-head h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; color: var(--c-text-primary); }
+.page-head p  { font-size: 13px; color: var(--c-text-secondary); margin: 0; }
+
+.stats { display: flex; gap: 14px; flex-wrap: wrap; }
+.stat {
+  font-size: 12px; color: var(--c-text-muted);
+  padding: 8px 12px; background: var(--c-surface);
+  border: 1px solid var(--c-border); border-radius: 7px;
+}
+.stat .num { color: var(--c-teal); font-weight: 600; font-size: 14px; margin-right: 4px; }
+
+.layout { display: grid; grid-template-columns: 1fr 320px; gap: 14px; }
+@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+/* --- Tree container --- */
+.tree-card {
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: 10px; padding: 22px 18px; min-height: 420px;
+}
+.tree-scroll {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.tree {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 32px;
+  justify-content: center;
+  min-width: 100%;
+}
+.tree.has-multiple-roots > .org-node { padding: 0 8px; }
+
+.state { padding: 60px 20px; text-align: center; color: var(--c-text-muted); font-size: 13px; }
+
+/* ===== Recursive top-down org tree =====
+ * Each .org-node is a column: card on top, .org-children row below.
+ * Connector lines drawn with pseudo-elements so no extra DOM is needed.
+ *
+ *   ┌────[card]────┐
+ *          │
+ *     ─────┴─────
+ *     │    │    │
+ *   [c1]  [c2]  [c3]
+ */
+
+.org-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* --- Block: card on top, optional worker roster panel below --- */
+.org-block {
+  display: flex; flex-direction: column;
+  width: 240px;
+  position: relative;
+  z-index: 1;
+}
+
+.org-card {
+  --accent: var(--c-teal);
+  padding: 10px 14px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border-hover);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+/* When a roster panel sits below the card, drop the card's bottom radius. */
+.org-block:has(.roster) .org-card {
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+}
+.org-info { min-width: 0; }
+.org-name {
+  font-size: 13px; font-weight: 600; color: var(--c-text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.org-meta {
+  display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
+  margin-top: 4px;
+}
+.role-pill, .team-pill {
+  display: inline-block; padding: 1px 7px;
+  border-radius: 9px; font-size: 9px;
+}
+.team-pill { background: rgba(148, 163, 184, 0.10); color: var(--c-text-secondary); }
+.org-position {
+  font-size: 10px; color: var(--c-text-muted); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Worker roster (compact list under the card) --- */
+.roster {
+  --accent: var(--c-blue);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-hover);
+  border-radius: 0 0 8px 8px;
+  padding: 8px 12px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.20);
+}
+.roster-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 9px; color: var(--c-text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding-bottom: 6px; margin-bottom: 6px;
+  border-bottom: 1px dashed var(--c-border);
+}
+.roster-count {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--c-blue);
+  padding: 1px 7px; border-radius: 9px;
+  font-size: 10px; font-weight: 600;
+}
+.roster-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.roster-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px; color: var(--c-text-primary);
+}
+.roster-item:hover { background: rgba(59, 130, 246, 0.08); }
+.roster-item.is-tl {
+  background: rgba(45, 212, 191, 0.06);
+}
+.roster-item.is-tl:hover { background: rgba(45, 212, 191, 0.12); }
+.roster-name {
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Role / status tags --- */
+.role-tag {
+  flex-shrink: 0;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.tag-teal { background: rgba(45, 212, 191, 0.18); color: var(--c-teal); }
+.tag-pink { background: rgba(236, 72, 153, 0.18); color: var(--c-pink); }
+
+/* --- Children row + connecting lines --- */
+.org-children {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  padding-top: 24px;
+  position: relative;
+}
+
+/* Vertical line dropping from the parent card all the way to the horizontal bar. */
+.org-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 24px;            /* matches .org-children padding-top so the line reaches the bar */
+  background: var(--c-border-hover);
+  transform: translateX(-50%);
+}
+
+/* Each child gets a vertical line on top connecting to the horizontal bar. */
+.org-child {
+  position: relative;
+  padding-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Vertical line from horizontal bar down to child card (covers the full padding area). */
+.org-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 12px;            /* matches .org-child padding-top so the line reaches the card */
+  background: var(--c-border-hover);
+  transform: translateX(-50%);
+}
+
+/* Horizontal bar across all children — drawn at the top of each child.
+ * The bar extends 14px into each side gap so that adjacent children's bars
+ * meet in the middle of the 28px gap, yielding one continuous line.
+ * (Half of `--children-gap`.) */
+.org-child::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -14px;
+  right: -14px;
+  height: 1px;
+  background: var(--c-border-hover);
+}
+/* First child: trim the left half of its own segment but keep the right gap-fill. */
+.org-children > .org-child:first-child::after {
+  left: 50%;
+  right: -14px;
+}
+/* Last child: trim the right half of its own segment but keep the left gap-fill. */
+.org-children > .org-child:last-child::after {
+  left: -14px;
+  right: 50%;
+}
+/* If there's only a single child, no horizontal bar at all (just a straight drop). */
+.org-children.single-child > .org-child::after {
+  display: none;
+}
+
+/* --- Aside (HR + QA) --- */
+.side { display: flex; flex-direction: column; gap: 14px; }
+.side-card {
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: 10px; padding: 14px;
+}
+.side-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--c-text-primary); font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+}
+.side-head .dot { width: 8px; height: 8px; border-radius: 50%; }
+.side-head .count {
+  margin-left: auto; padding: 2px 8px;
+  background: var(--c-bg); color: var(--c-text-muted);
+  border-radius: 9px; font-size: 10px; font-weight: 500;
+  text-transform: none; letter-spacing: 0;
+}
+.side-empty { font-size: 12px; color: var(--c-text-muted); }
+.side-list { display: flex; flex-direction: column; gap: 6px; }
+.side-row {
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: rgba(15, 31, 58, 0.5);
+}
+.side-row:hover { background: rgba(45, 212, 191, 0.06); }
+.side-info { min-width: 0; }
+.side-name {
+  font-size: 12px; font-weight: 500; color: var(--c-text-primary);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.side-meta { font-size: 10px; color: var(--c-text-muted); margin-top: 2px; }

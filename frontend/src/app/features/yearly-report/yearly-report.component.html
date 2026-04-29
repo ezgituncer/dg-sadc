@@ -1,0 +1,217 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Yearly Report</h1>
+      <p>Kullanıcı bazlı aylık workload özeti — beklenen saatlere göre renklendirme</p>
+    </div>
+    <div class="actions">
+      <button class="btn-edit" type="button" (click)="openEditor()">
+        <lucide-icon [img]="icons.Edit2" size="12"></lucide-icon>
+        {{ canEditWorkingDays() ? 'Working days düzenle' : 'Working days göster' }}
+      </button>
+      <button
+        class="btn-export"
+        type="button"
+        [disabled]="userCount() === 0"
+        (click)="exportCsv()"
+      >
+        <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
+        Excel'e aktar
+      </button>
+    </div>
+  </header>
+
+  <!-- Filters -->
+  <section class="filter-bar">
+    <div class="filter-label">
+      <lucide-icon [img]="icons.Calendar" size="11"></lucide-icon>
+      Yıl:
+    </div>
+    <select class="dropdown" [ngModel]="year()" (ngModelChange)="year.set($event)">
+      @for (y of availableYears; track y) {
+        <option [ngValue]="y">{{ y }}</option>
+      }
+    </select>
+    <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
+      <option [ngValue]="null">Tüm takımlar</option>
+      @for (t of teams.list(); track t.id) {
+        <option [ngValue]="t.id">{{ t.name }}</option>
+      }
+    </select>
+    <select class="dropdown" [ngModel]="projectFilter()" (ngModelChange)="projectFilter.set($event)">
+      <option [ngValue]="null">Tüm projeler</option>
+      @for (p of lookups.activeProjects(); track p.id) {
+        <option [ngValue]="p.id">{{ p.name }}</option>
+      }
+    </select>
+    <div class="search-wrap">
+      <lucide-icon [img]="icons.Search" size="13" class="search-icon"></lucide-icon>
+      <input
+        type="text"
+        class="search"
+        placeholder="Kullanıcı ara..."
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+    </div>
+  </section>
+
+  <!-- KPI cards -->
+  <section class="kpis">
+    <div class="kpi accent-teal">
+      <div class="kpi-label">{{ year() }} Hedef</div>
+      <div class="kpi-value">{{ yearTargetTotal() }} <span>saat / kişi</span></div>
+      <div class="kpi-sub">{{ expectedDays().reduce(sumReducer, 0) }} working days × 8h</div>
+    </div>
+    <div class="kpi accent-blue">
+      <div class="kpi-label">Toplam giriş</div>
+      <div class="kpi-value">{{ grandTotal().toFixed(1) }} <span>saat</span></div>
+      <div class="kpi-sub">{{ userCount() }} kullanıcı</div>
+    </div>
+    <div class="kpi accent-purple">
+      <div class="kpi-label">Ort. saat / kişi</div>
+      <div class="kpi-value">{{ avgPerUser().toFixed(1) }} <span>saat</span></div>
+      <div class="kpi-sub">yıllık ortalama</div>
+    </div>
+    <div class="kpi accent-amber">
+      <div class="kpi-label">Genel doluluk</div>
+      <div class="kpi-value">{{ fillRatePct() }}<span>%</span></div>
+      <div class="kpi-sub">hedefe göre</div>
+    </div>
+  </section>
+
+  <!-- Color legend -->
+  <div class="legend">
+    <span class="legend-label">Renk açıklaması:</span>
+    <span class="legend-item"><span class="swatch green"></span>Hedef üstü (&gt;100%)</span>
+    <span class="legend-item"><span class="swatch none"></span>Tam (100%)</span>
+    <span class="legend-item"><span class="swatch yellow"></span>Eksik (50–99%)</span>
+    <span class="legend-item"><span class="swatch red"></span>Çok düşük (&lt;50%)</span>
+  </div>
+
+  <!-- Matrix -->
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-left user-col">
+              @if (userCount() > 0) {
+                <button class="expand-all" type="button" (click)="toggleAllRows()">
+                  @if (allExpanded()) {
+                    <lucide-icon [img]="icons.X" size="11"></lucide-icon>
+                  } @else {
+                    <lucide-icon [img]="icons.Plus" size="11"></lucide-icon>
+                  }
+                </button>
+              }
+              Kullanıcı
+            </th>
+            @for (m of trMonths; track $index) {
+              <th class="month-col">
+                <div>{{ m }}</div>
+                <div class="sub">{{ expectedDays()[$index] }}d/{{ expectedDays()[$index] * 8 }}h</div>
+              </th>
+            }
+            <th class="total-col">Toplam</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td [attr.colspan]="14" class="state">Yükleniyor...</td></tr>
+          } @else if (userCount() === 0) {
+            <tr><td [attr.colspan]="14" class="state">Filtreyle eşleşen kullanıcı bulunamadı</td></tr>
+          } @else {
+            @for (row of report()?.rows ?? []; track row.user.accountId) {
+              <tr>
+                <td class="sticky-left user-cell">
+                  <div class="user-row">
+                    <button
+                      class="expand-btn"
+                      type="button"
+                      [class.active]="isExpanded(row.user.accountId)"
+                      (click)="toggleRow(row.user.accountId)"
+                    >
+                      @if (isExpanded(row.user.accountId)) {
+                        <lucide-icon [img]="icons.X" size="11"></lucide-icon>
+                      } @else {
+                        <lucide-icon [img]="icons.Plus" size="11"></lucide-icon>
+                      }
+                    </button>
+                    <span class="avatar">{{ initials(row.user.name) }}</span>
+                    <div class="user-meta">
+                      <div class="user-name">{{ row.user.name }}</div>
+                      @if (row.user.team) {
+                        <span class="team-badge">{{ row.user.team }}</span>
+                      }
+                    </div>
+                  </div>
+                </td>
+                @for (h of row.hoursByMonth; track $index) {
+                  <td class="cell" [style.background]="toneStyle(toneFor(parseFloat(h), $index)).bg"
+                      [style.color]="toneStyle(toneFor(parseFloat(h), $index)).text"
+                      [style.border]="'1px solid ' + toneStyle(toneFor(parseFloat(h), $index)).border"
+                      [title]="trMonthsFull[$index] + ': ' + parseFloat(h).toFixed(1) + ' / ' + monthTargetHours($index) + 'h'">
+                    {{ parseFloat(h) > 0 ? parseFloat(h).toFixed(1) : '—' }}
+                  </td>
+                }
+                <td class="total-cell"
+                    [style.background]="toneStyle(yearTone(parseFloat(row.yearTotal))).bg"
+                    [style.color]="toneStyle(yearTone(parseFloat(row.yearTotal))).text"
+                    [style.border]="'1px solid ' + toneStyle(yearTone(parseFloat(row.yearTotal))).border">
+                  {{ parseFloat(row.yearTotal).toFixed(1) }}h
+                </td>
+              </tr>
+
+              @if (isExpanded(row.user.accountId) && includeBreakdown()) {
+                @for (entry of row.breakdownByActivity | keyvalue; track entry.key) {
+                  <tr class="breakdown-row">
+                    <td class="sticky-left breakdown-name">
+                      <span class="dot" [style.background]="activityColor(entry.key)"></span>
+                      <span [style.color]="activityColor(entry.key)">{{ activityName(entry.key) }}</span>
+                    </td>
+                    @for (h of entry.value; track $index) {
+                      <td class="breakdown-cell"
+                          [style.color]="parseFloat(h) > 0 ? activityColor(entry.key) : 'var(--c-text-muted)'">
+                        {{ parseFloat(h) > 0 ? parseFloat(h).toFixed(1) : '—' }}
+                      </td>
+                    }
+                    <td class="breakdown-total"
+                        [style.color]="activityColor(entry.key)">
+                      {{ entry.value.reduce(sumStringReducer, 0).toFixed(1) }}h
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          }
+        </tbody>
+        @if (userCount() > 0) {
+          <tfoot>
+            <tr>
+              <td class="sticky-left foot-label">Şirket toplamı</td>
+              @for (h of columnTotals(); track $index) {
+                <td class="foot-cell">{{ h > 0 ? h.toFixed(0) : '—' }}</td>
+              }
+              <td class="foot-total">{{ grandTotal().toFixed(0) }}h</td>
+            </tr>
+          </tfoot>
+        }
+      </table>
+    </div>
+  </section>
+
+  @if (editorOpen()) {
+    <app-working-days-editor
+      [year]="year()"
+      [initial]="expectedDays()"
+      [canEdit]="canEditWorkingDays()"
+      (save)="saveWorkingDays($event)"
+      (close)="closeEditor()"
+    />
+  }
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+</div>

@@ -1,0 +1,305 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Workload listesi</h1>
+      <p>{{ isWorker() ? 'Şirket geneli kayıtlar — read-only' : 'Tüm kayıtları filtrele ve düzenle' }}</p>
+    </div>
+    <div class="actions">
+      <button
+        class="btn-clear"
+        [class.has-active]="activeFilterCount() > 0"
+        (click)="clearFilters()"
+        type="button"
+      >
+        <lucide-icon [img]="icons.X" size="12"></lucide-icon>
+        Filtreleri temizle
+        @if (activeFilterCount() > 0) {
+          <span class="badge">{{ activeFilterCount() }}</span>
+        }
+      </button>
+      <button
+        class="btn-export"
+        type="button"
+        [disabled]="total() === 0"
+        (click)="exportCsv()"
+      >
+        <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
+        CSV indir ({{ total() }})
+      </button>
+    </div>
+  </header>
+
+  <!-- ============== Filter bar ============== -->
+  <section class="filter-bar">
+    <div class="filter-row">
+      <div class="filter-label">
+        <lucide-icon [img]="icons.Calendar" size="11"></lucide-icon>
+        Tarih aralığı:
+      </div>
+      <input
+        type="date"
+        class="date-input"
+        [ngModel]="dateFrom()"
+        (ngModelChange)="dateFrom.set($event); page.set(1)"
+      />
+      <span class="dash">—</span>
+      <input
+        type="date"
+        class="date-input"
+        [ngModel]="dateTo()"
+        (ngModelChange)="dateTo.set($event); page.set(1)"
+      />
+      <div class="presets">
+        <button class="preset-btn" type="button" (click)="presetToday()">Bugün</button>
+        <button class="preset-btn" type="button" (click)="presetSevenDays()">Son 7 gün</button>
+        <button class="preset-btn" type="button" (click)="presetThirtyDays()">Son 30 gün</button>
+      </div>
+      <div class="search-wrap">
+        <lucide-icon [img]="icons.Search" size="13" class="search-icon"></lucide-icon>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Açıklamada ara..."
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event); page.set(1)"
+        />
+      </div>
+    </div>
+
+    <div class="filter-row dropdowns">
+      <select class="dropdown" [ngModel]="activityTypeIdFilter()"
+              (ngModelChange)="activityTypeIdFilter.set($event); page.set(1)">
+        <option [ngValue]="null">Activity (tümü)</option>
+        @for (a of lookups.activityTypes(); track a.id) {
+          <option [ngValue]="a.id">{{ a.name }}</option>
+        }
+      </select>
+      <select class="dropdown" [ngModel]="projectIdFilter()"
+              (ngModelChange)="projectIdFilter.set($event); page.set(1)">
+        <option [ngValue]="null">Proje (tümü)</option>
+        @for (p of lookups.activeProjects(); track p.id) {
+          <option [ngValue]="p.id">{{ p.name }}</option>
+        }
+      </select>
+      <select class="dropdown" [ngModel]="taskTypeIdFilter()"
+              (ngModelChange)="taskTypeIdFilter.set($event); page.set(1)">
+        <option [ngValue]="null">Task type (tümü)</option>
+        @for (t of lookups.activeTaskTypes(); track t.id) {
+          <option [ngValue]="t.id">{{ t.name }}</option>
+        }
+      </select>
+      <select class="dropdown" [ngModel]="statusFilter()"
+              (ngModelChange)="statusFilter.set($event); page.set(1)">
+        <option value="">Status (tümü)</option>
+        <option value="ongoing">Devam ediyor</option>
+        <option value="completed">Tamamlandı</option>
+        <option value="blocked">Bloke</option>
+      </select>
+      <select class="dropdown" [ngModel]="complexityFilter()"
+              (ngModelChange)="complexityFilter.set($event); page.set(1)">
+        <option value="">Complexity (tümü)</option>
+        <option value="low">Düşük</option>
+        <option value="medium">Orta</option>
+        <option value="high">Yüksek</option>
+      </select>
+      <input
+        type="text"
+        class="dropdown account-input"
+        placeholder="Account ID (örn. EMP001)"
+        [ngModel]="accountIdFilter()"
+        (ngModelChange)="accountIdFilter.set(($event || '').toUpperCase()); page.set(1)"
+      />
+    </div>
+  </section>
+
+  <!-- ============== KPI cards (driven by aggregate endpoint) ============== -->
+  <section class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Toplam kayıt</div>
+      <div class="kpi-value">{{ kpis().totalEntries }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Toplam saat</div>
+      <div class="kpi-value">{{ kpis().totalHours }} <span>saat</span></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Aktif proje</div>
+      <div class="kpi-value">{{ kpis().uniqueProjects }}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Aktif gün ort.</div>
+      <div class="kpi-value">{{ kpis().avgPerDay }} <span>saat</span></div>
+    </div>
+  </section>
+
+  <!-- ============== Charts (3 panels) ============== -->
+  <section class="charts">
+    <div class="chart-card">
+      <div class="chart-head">
+        <lucide-icon [img]="icons.TrendingUp" size="14"></lucide-icon>
+        <span>Günlük trend</span>
+      </div>
+      <div class="chart-body">
+        @if (chartHasData()) {
+          <canvas
+            baseChart
+            type="line"
+            [data]="trendChartData()"
+            [options]="trendChartOptions"
+          ></canvas>
+        } @else {
+          <div class="chart-empty">Filtreyle eşleşen kayıt yok</div>
+        }
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <lucide-icon [img]="icons.PieIcon" size="14"></lucide-icon>
+        <span>Proje dağılımı</span>
+      </div>
+      <div class="chart-body">
+        @if (chartHasData() && projectChartData().labels?.length) {
+          <canvas
+            baseChart
+            type="doughnut"
+            [data]="projectChartData()"
+            [options]="projectChartOptions"
+          ></canvas>
+        } @else {
+          <div class="chart-empty">Filtreyle eşleşen proje yok</div>
+        }
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <lucide-icon [img]="icons.BarChart3" size="14"></lucide-icon>
+        <span>Activity dağılımı</span>
+      </div>
+      <div class="chart-body">
+        @if (chartHasData() && activityChartData().labels?.length) {
+          <canvas
+            baseChart
+            type="bar"
+            [data]="activityChartData()"
+            [options]="activityChartOptions"
+          ></canvas>
+        } @else {
+          <div class="chart-empty">Filtreyle eşleşen activity yok</div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== Table ============== -->
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" (click)="toggleSort('work_date')">
+              Tarih
+              @if (sort().key === 'work_date') {
+                <span class="arrow">{{ sort().direction === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </th>
+            <th>Kullanıcı</th>
+            <th>Activity</th>
+            <th>Proje</th>
+            <th>Kategori</th>
+            <th>Task type</th>
+            <th>Açıklama</th>
+            <th>Status</th>
+            <th>Complexity</th>
+            <th class="sortable" (click)="toggleSort('hours_spent')">
+              Saat
+              @if (sort().key === 'hours_spent') {
+                <span class="arrow">{{ sort().direction === 'asc' ? '▲' : '▼' }}</span>
+              }
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr><td colspan="11" class="loading">Yükleniyor...</td></tr>
+          } @else if (entries().length === 0) {
+            <tr><td colspan="11" class="empty">Eşleşen kayıt yok</td></tr>
+          } @else {
+            @for (entry of entries(); track entry.id) {
+              <tr>
+                <td>{{ entry.workDate }}</td>
+                <td>
+                  <div class="user-cell">
+                    <span class="user-name">{{ users.nameFor(entry.accountId) }}</span>
+                    <span class="acc-id">{{ entry.accountId }}</span>
+                  </div>
+                </td>
+                <td>{{ activityName(entry.activityTypeId) }}</td>
+                <td>{{ projectName(entry.projectId) }}</td>
+                <td>
+                  <span class="cat-cell">
+                    <span class="cat-dot" [style.background]="categoryFor(entry)?.color"></span>
+                    {{ categoryFor(entry)?.name || '—' }}
+                  </span>
+                </td>
+                <td>{{ taskTypeName(entry.taskTypeId) }}</td>
+                <td class="desc-cell" [title]="entry.taskDescription">{{ entry.taskDescription }}</td>
+                <td><span class="pill pill-{{ entry.status }}">{{ entry.status }}</span></td>
+                <td><span class="pill pill-c-{{ entry.complexity }}">{{ entry.complexity }}</span></td>
+                <td class="hours-cell">{{ entry.hoursSpent }}</td>
+                <td class="row-actions">
+                  @if (canEditEntry(entry)) {
+                    <button class="icon-btn danger" (click)="askDelete(entry.id)" title="Sil">
+                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============== Pagination ============== -->
+    <div class="pagination">
+      <div class="page-size">
+        Sayfa boyutu:
+        @for (size of pageSizeOptions; track size) {
+          <button class="size-btn" [class.active]="pageSize() === size" (click)="setPageSize(size)">
+            {{ size }}
+          </button>
+        }
+      </div>
+      <div class="page-controls">
+        <button class="page-btn" [disabled]="page() === 1" (click)="setPage(page() - 1)">
+          <lucide-icon [img]="icons.ChevronLeft" size="13"></lucide-icon>
+        </button>
+        @for (p of paginationWindow(); track p) {
+          <button class="page-btn" [class.active]="p === page()" (click)="setPage(p)">{{ p }}</button>
+        }
+        <button class="page-btn" [disabled]="page() === totalPages()" (click)="setPage(page() + 1)">
+          <lucide-icon [img]="icons.ChevronRight" size="13"></lucide-icon>
+        </button>
+        <span class="page-info">Sayfa {{ page() }}/{{ totalPages() }} · Toplam {{ total() }}</span>
+      </div>
+    </div>
+  </section>
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDeleteId() !== null) {
+    <app-confirm-dialog
+      title="Kaydı sil"
+      message="Bu workload kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz."
+      confirmLabel="Sil"
+      [danger]="true"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    />
+  }
+</div>

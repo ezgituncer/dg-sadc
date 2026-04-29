@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: workload
+          POSTGRES_PASSWORD: workload
+          POSTGRES_DB: workload_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U workload"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create test database
+        env:
+          PGPASSWORD: workload
+        run: |
+          sudo apt-get install -y postgresql-client
+          psql -h localhost -U workload -c "CREATE DATABASE workload_test;"
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://workload:workload@localhost:5432/workload_dev
+          DATABASE_URL_SYNC: postgresql+psycopg2://workload:workload@localhost:5432/workload_dev
+          TEST_DATABASE_URL: postgresql+asyncpg://workload:workload@localhost:5432/workload_test
+          TEST_DATABASE_URL_SYNC: postgresql+psycopg2://workload:workload@localhost:5432/workload_test
+          JWT_SECRET: ci-test-secret-not-for-production
+          SEED_USERS: 'true'
+          LOGIN_RATE_LIMIT: 100000/minute
+        run: pytest
+
+  frontend:
+    name: Frontend (build + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests (headless Chrome)
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Production build
+        run: npm run build -- --configuration=production
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: workload-api:ci
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: workload-web:ci

@@ -1,0 +1,202 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>Yönetim</h1>
+      <p>Lookup tabloları — projeler, activity types, kategoriler, task types</p>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    @for (t of tabs; track t.kind) {
+      <button
+        type="button"
+        class="tab"
+        [class.active]="activeTab().kind === t.kind"
+        (click)="selectTab(t)"
+      >
+        {{ t.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <lucide-icon [img]="icons.Search" size="13" class="search-icon"></lucide-icon>
+      <input
+        type="text"
+        class="search"
+        placeholder="Kod / ad ara..."
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+    </div>
+    <label class="toggle">
+      <input
+        type="checkbox"
+        [ngModel]="includeInactive()"
+        (ngModelChange)="includeInactive.set($event)"
+      />
+      Pasifleri göster
+    </label>
+    <button class="btn-primary" (click)="startCreate()">
+      <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+      Yeni ekle
+    </button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>Kod</th>
+          <th>İsim</th>
+          @if (activeTab().hasColor) { <th>Renk</th> }
+          @if (activeTab().hasDescription) { <th>Açıklama</th> }
+          <th>Durum</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td [attr.colspan]="6" class="state">Yükleniyor...</td></tr>
+        } @else if (filteredItems().length === 0) {
+          <tr><td [attr.colspan]="6" class="state">Eşleşen kayıt yok</td></tr>
+        } @else {
+          @for (item of filteredItems(); track item.id) {
+            <tr [class.inactive]="!item.isActive">
+              <td><span class="code">{{ item.code }}</span></td>
+              <td>{{ item.name }}</td>
+              @if (activeTab().hasColor) {
+                <td>
+                  <span class="color-cell">
+                    <span class="color-dot" [style.background]="item.color"></span>
+                    <span class="color-hex">{{ item.color }}</span>
+                  </span>
+                </td>
+              }
+              @if (activeTab().hasDescription) {
+                <td class="desc-cell" [title]="item.description">{{ item.description || '—' }}</td>
+              }
+              <td>
+                @if (item.isActive) {
+                  <span class="pill pill-active">Aktif</span>
+                } @else {
+                  <span class="pill pill-inactive">Pasif</span>
+                }
+              </td>
+              <td class="row-actions">
+                <button class="icon-btn" (click)="startEdit(item)" title="Düzenle">
+                  <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
+                </button>
+                @if (item.isActive) {
+                  <button class="icon-btn danger" (click)="askDelete(item)" title="Soft delete">
+                    <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                  </button>
+                } @else {
+                  <button class="icon-btn success" (click)="reactivate(item)" title="Yeniden aktif">
+                    <lucide-icon [img]="icons.Power" size="13"></lucide-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal -->
+  @if (modal(); as m) {
+    <div class="modal-overlay" (click)="closeModal()"></div>
+    <div class="modal">
+      <header class="modal-head">
+        <div class="title">
+          {{ m.mode === 'create' ? 'Yeni' : 'Düzenle' }} — {{ activeTab().label }}
+        </div>
+        <button class="x" (click)="closeModal()" aria-label="Kapat">
+          <lucide-icon [img]="icons.X" size="14"></lucide-icon>
+        </button>
+      </header>
+
+      <div class="modal-body">
+        <div class="field">
+          <label>Kod {{ m.mode === 'edit' ? '(değiştirilemez)' : '*' }}</label>
+          <input
+            type="text"
+            class="input"
+            [readonly]="m.mode === 'edit'"
+            [ngModel]="m.code"
+            (ngModelChange)="patchModal('code', ($event || '').toUpperCase())"
+            placeholder="örn. NEW_CAT"
+          />
+          @if (codeError()) {
+            <div class="error">{{ codeError() }}</div>
+          }
+        </div>
+        <div class="field">
+          <label>İsim *</label>
+          <input
+            type="text"
+            class="input"
+            [ngModel]="m.name"
+            (ngModelChange)="patchModal('name', $event)"
+          />
+        </div>
+        @if (activeTab().hasDescription) {
+          <div class="field">
+            <label>Açıklama</label>
+            <textarea
+              class="input"
+              rows="2"
+              [ngModel]="m.description"
+              (ngModelChange)="patchModal('description', $event)"
+            ></textarea>
+          </div>
+        }
+        @if (activeTab().hasColor) {
+          <div class="field">
+            <label>Renk</label>
+            <div class="color-picker">
+              @for (c of colorPalette; track c) {
+                <button
+                  type="button"
+                  class="color-swatch"
+                  [class.active]="m.color === c"
+                  [style.background]="c"
+                  [title]="c"
+                  (click)="patchModal('color', c)"
+                ></button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="closeModal()">İptal</button>
+        <button class="btn-primary" [disabled]="saving()" (click)="saveModal()">
+          <lucide-icon [img]="icons.Save" size="13"></lucide-icon>
+          {{ m.mode === 'create' ? 'Oluştur' : 'Kaydet' }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDelete(); as cd) {
+    <app-confirm-dialog
+      title="Kaydı pasif et"
+      [message]="'\'' + cd.name + '\' pasif edilecek. Bu kayda referans veren workload kayıtları korunur.'"
+      confirmLabel="Pasif et"
+      [danger]="true"
+      (confirm)="confirmSoftDelete()"
+      (cancel)="cancelDelete()"
+    />
+  }
+</div>
