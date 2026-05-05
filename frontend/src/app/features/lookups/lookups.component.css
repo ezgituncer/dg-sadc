@@ -10,6 +10,7 @@
   display: flex; gap: 4px; padding: 4px; margin-bottom: 14px;
   background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 8px;
   overflow-x: auto;
+  backdrop-filter: blur(30px);
 }
 .tab {
   padding: 8px 14px; background: transparent;
@@ -31,6 +32,7 @@
   width: 100%; padding: 8px 12px 8px 32px; box-sizing: border-box;
   background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 6px;
   color: var(--c-text-primary); font-size: 12px; outline: none; font-family: inherit;
+  backdrop-filter: blur(30px);
 }
 .toggle {
   display: inline-flex; align-items: center; gap: 8px;
@@ -51,6 +53,7 @@
 .table-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; overflow: hidden;
+  backdrop-filter: blur(30px);
 }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
@@ -106,6 +109,7 @@ tbody tr.inactive { opacity: 0.6; }
   background: var(--c-surface); border: 1px solid var(--c-border-hover); border-radius: 10px;
   width: calc(100% - 40px); max-width: 480px; z-index: 201;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  backdrop-filter: blur(30px);
 }
 .modal-head {
   padding: 14px 18px; border-bottom: 1px solid var(--c-border);

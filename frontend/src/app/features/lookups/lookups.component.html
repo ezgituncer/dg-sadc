@@ -1,8 +1,8 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Yönetim</h1>
-      <p>Lookup tabloları — projeler, activity types, kategoriler, task types</p>
+      <h1>{{ 'lookups.title' | t }}</h1>
+      <p>{{ 'lookups.subtitle' | t }}</p>
     </div>
   </header>
 
@@ -15,7 +15,7 @@
         [class.active]="activeTab().kind === t.kind"
         (click)="selectTab(t)"
       >
-        {{ t.label }}
+        {{ t.labelKey | t }}
       </button>
     }
   </div>
@@ -27,7 +27,7 @@
       <input
         type="text"
         class="search"
-        placeholder="Kod / ad ara..."
+        [placeholder]="'lookups.search_placeholder' | t"
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
       />
@@ -38,11 +38,11 @@
         [ngModel]="includeInactive()"
         (ngModelChange)="includeInactive.set($event)"
       />
-      Pasifleri göster
+      {{ 'lookups.show_inactive' | t }}
     </label>
     <button class="btn-primary" (click)="startCreate()">
       <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
-      Yeni ekle
+      {{ 'lookups.btn_new' | t }}
     </button>
   </div>
 
@@ -51,19 +51,19 @@
     <table>
       <thead>
         <tr>
-          <th>Kod</th>
-          <th>İsim</th>
-          @if (activeTab().hasColor) { <th>Renk</th> }
-          @if (activeTab().hasDescription) { <th>Açıklama</th> }
-          <th>Durum</th>
+          <th>{{ 'lookups.th_code' | t }}</th>
+          <th>{{ 'lookups.th_name' | t }}</th>
+          @if (activeTab().hasColor) { <th>{{ 'lookups.th_color' | t }}</th> }
+          @if (activeTab().hasDescription) { <th>{{ 'lookups.th_description' | t }}</th> }
+          <th>{{ 'lookups.th_status' | t }}</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td [attr.colspan]="6" class="state">Yükleniyor...</td></tr>
+          <tr><td [attr.colspan]="6" class="state">{{ 'common.loading' | t }}</td></tr>
         } @else if (filteredItems().length === 0) {
-          <tr><td [attr.colspan]="6" class="state">Eşleşen kayıt yok</td></tr>
+          <tr><td [attr.colspan]="6" class="state">{{ 'common.no_results' | t }}</td></tr>
         } @else {
           @for (item of filteredItems(); track item.id) {
             <tr [class.inactive]="!item.isActive">
@@ -82,21 +82,21 @@
               }
               <td>
                 @if (item.isActive) {
-                  <span class="pill pill-active">Aktif</span>
+                  <span class="pill pill-active">{{ 'common.active' | t }}</span>
                 } @else {
-                  <span class="pill pill-inactive">Pasif</span>
+                  <span class="pill pill-inactive">{{ 'common.passive' | t }}</span>
                 }
               </td>
               <td class="row-actions">
-                <button class="icon-btn" (click)="startEdit(item)" title="Düzenle">
+                <button class="icon-btn" (click)="startEdit(item)" [title]="'common.edit' | t">
                   <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
                 </button>
                 @if (item.isActive) {
-                  <button class="icon-btn danger" (click)="askDelete(item)" title="Soft delete">
+                  <button class="icon-btn danger" (click)="askDelete(item)" [title]="'lookups.confirm_delete_btn' | t">
                     <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
                   </button>
                 } @else {
-                  <button class="icon-btn success" (click)="reactivate(item)" title="Yeniden aktif">
+                  <button class="icon-btn success" (click)="reactivate(item)" [title]="'common.reactivate' | t">
                     <lucide-icon [img]="icons.Power" size="13"></lucide-icon>
                   </button>
                 }
@@ -114,30 +114,30 @@
     <div class="modal">
       <header class="modal-head">
         <div class="title">
-          {{ m.mode === 'create' ? 'Yeni' : 'Düzenle' }} — {{ activeTab().label }}
+          {{ (m.mode === 'create' ? 'lookups.modal_new' : 'lookups.modal_edit') | t }} — {{ activeTab().labelKey | t }}
         </div>
-        <button class="x" (click)="closeModal()" aria-label="Kapat">
+        <button class="x" (click)="closeModal()" [attr.aria-label]="'common.close' | t">
           <lucide-icon [img]="icons.X" size="14"></lucide-icon>
         </button>
       </header>
 
       <div class="modal-body">
         <div class="field">
-          <label>Kod {{ m.mode === 'edit' ? '(değiştirilemez)' : '*' }}</label>
+          <label>{{ (m.mode === 'edit' ? 'lookups.field_code_immutable' : 'lookups.field_code_required') | t }}</label>
           <input
             type="text"
             class="input"
             [readonly]="m.mode === 'edit'"
             [ngModel]="m.code"
             (ngModelChange)="patchModal('code', ($event || '').toUpperCase())"
-            placeholder="örn. NEW_CAT"
+            [placeholder]="'lookups.placeholder_code' | t"
           />
           @if (codeError()) {
             <div class="error">{{ codeError() }}</div>
           }
         </div>
         <div class="field">
-          <label>İsim *</label>
+          <label>{{ 'lookups.field_name_required' | t }}</label>
           <input
             type="text"
             class="input"
@@ -147,7 +147,7 @@
         </div>
         @if (activeTab().hasDescription) {
           <div class="field">
-            <label>Açıklama</label>
+            <label>{{ 'lookups.field_description' | t }}</label>
             <textarea
               class="input"
               rows="2"
@@ -158,7 +158,7 @@
         }
         @if (activeTab().hasColor) {
           <div class="field">
-            <label>Renk</label>
+            <label>{{ 'lookups.field_color' | t }}</label>
             <div class="color-picker">
               @for (c of colorPalette; track c) {
                 <button
@@ -176,10 +176,10 @@
       </div>
 
       <footer class="modal-foot">
-        <button class="btn-secondary" (click)="closeModal()">İptal</button>
+        <button class="btn-secondary" (click)="closeModal()">{{ 'common.cancel' | t }}</button>
         <button class="btn-primary" [disabled]="saving()" (click)="saveModal()">
           <lucide-icon [img]="icons.Save" size="13"></lucide-icon>
-          {{ m.mode === 'create' ? 'Oluştur' : 'Kaydet' }}
+          {{ (m.mode === 'create' ? 'common.create' : 'common.save') | t }}
         </button>
       </footer>
     </div>
@@ -191,9 +191,9 @@
 
   @if (confirmDelete(); as cd) {
     <app-confirm-dialog
-      title="Kaydı pasif et"
-      [message]="'\'' + cd.name + '\' pasif edilecek. Bu kayda referans veren workload kayıtları korunur.'"
-      confirmLabel="Pasif et"
+      [title]="'lookups.confirm_delete_title' | t"
+      [message]="'lookups.confirm_delete_msg' | t : { name: cd.name }"
+      [confirmLabel]="'lookups.confirm_delete_btn' | t"
       [danger]="true"
       (confirm)="confirmSoftDelete()"
       (cancel)="cancelDelete()"

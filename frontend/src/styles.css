@@ -1,7 +1,7 @@
 /* Design tokens — mirrors the `C` palette in mockup/workload-app.jsx */
 :root {
   --c-bg: #0A1628;
-  --c-surface: #0F1F3A;
+  --c-surface: #0e1f3a4d;
   --c-surface-hover: #142847;
   --c-surface-deep: #081020;
   --c-border: rgba(148, 163, 184, 0.12);
@@ -19,13 +19,16 @@
   --c-red: #EF4444;
 }
 
+html {
+  background: var(--c-bg);  /* base color — only visible if no component supplies a background image */
+}
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--c-bg);
   color: var(--c-text-primary);
   font-family: system-ui, -apple-system, sans-serif;
 }
+body { background: transparent; }
 
 * { box-sizing: border-box; }
 

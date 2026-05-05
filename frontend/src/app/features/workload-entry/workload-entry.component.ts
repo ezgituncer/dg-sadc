@@ -26,8 +26,10 @@ import {
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { WorkloadService } from '../../core/services/workload.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import {
   Complexity,
   WorkStatus,
@@ -73,6 +75,7 @@ const EMPTY_FORM: FormState = {
     LucideAngularModule,
     ToastComponent,
     ConfirmDialogComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './workload-entry.component.html',
@@ -82,6 +85,7 @@ export class WorkloadEntryComponent {
   private readonly auth = inject(AuthService);
   private readonly lookups = inject(LookupService);
   private readonly api = inject(WorkloadService);
+  private readonly localeSvc = inject(LocaleService);
 
   readonly icons = {
     Calendar, AlertCircle, Edit2, Activity, Tag, FolderOpen, Layers,
@@ -119,16 +123,23 @@ export class WorkloadEntryComponent {
   readonly projectOptions = computed(() => this.lookups.activeProjects());
   readonly taskTypeOptions = computed(() => this.lookups.activeTaskTypes());
 
-  readonly statusOptions: { value: WorkStatus; label: string; color: string }[] = [
-    { value: 'ongoing',   label: 'Devam ediyor', color: 'var(--c-blue)' },
-    { value: 'completed', label: 'Tamamlandı',   color: 'var(--c-green)' },
-    { value: 'blocked',   label: 'Bloke',        color: 'var(--c-red)' },
-  ];
-  readonly complexityOptions: { value: Complexity; label: string }[] = [
-    { value: 'low',    label: 'Düşük' },
-    { value: 'medium', label: 'Orta' },
-    { value: 'high',   label: 'Yüksek' },
-  ];
+  readonly statusOptions = computed<{ value: WorkStatus; label: string; color: string }[]>(() => {
+    // touch the locale signal so the labels recompute when the user toggles language
+    this.localeSvc.locale();
+    return [
+      { value: 'ongoing',   label: this.localeSvc.t('workload_entry.status_ongoing'),   color: 'var(--c-blue)' },
+      { value: 'completed', label: this.localeSvc.t('workload_entry.status_completed'), color: 'var(--c-green)' },
+      { value: 'blocked',   label: this.localeSvc.t('workload_entry.status_blocked'),   color: 'var(--c-red)' },
+    ];
+  });
+  readonly complexityOptions = computed<{ value: Complexity; label: string }[]>(() => {
+    this.localeSvc.locale();
+    return [
+      { value: 'low',    label: this.localeSvc.t('workload_entry.complexity_low') },
+      { value: 'medium', label: this.localeSvc.t('workload_entry.complexity_medium') },
+      { value: 'high',   label: this.localeSvc.t('workload_entry.complexity_high') },
+    ];
+  });
 
   readonly dayEntries = computed(() => {
     const me = this.currentUser()?.accountId;
@@ -209,7 +220,10 @@ export class WorkloadEntryComponent {
     op$.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.showToast(editId ? 'Kayıt güncellendi' : 'Workload eklendi', 'success');
+        this.showToast(
+          this.localeSvc.t(editId ? 'common.saved' : 'workload_entry.toast_added'),
+          'success',
+        );
         this.resetForm();
         const me = this.currentUser()?.accountId;
         if (me) this.loadDayEntries(me, this.date());
@@ -217,7 +231,7 @@ export class WorkloadEntryComponent {
       error: (err) => {
         this.submitting.set(false);
         const detail = err?.error?.detail;
-        this.showToast(typeof detail === 'string' ? detail : 'Kaydedilemedi', 'error');
+        this.showToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
       },
     });
   }
@@ -251,14 +265,14 @@ export class WorkloadEntryComponent {
     this.confirmDeleteId.set(null);
     this.api.delete(id).subscribe({
       next: () => {
-        this.showToast('Kayıt silindi', 'success');
+        this.showToast(this.localeSvc.t('common.deleted'), 'success');
         if (this.editingId() === id) this.resetForm();
         const me = this.currentUser()?.accountId;
         if (me) this.loadDayEntries(me, this.date());
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.showToast(typeof detail === 'string' ? detail : 'Silinemedi', 'error');
+        this.showToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_delete'), 'error');
       },
     });
   }

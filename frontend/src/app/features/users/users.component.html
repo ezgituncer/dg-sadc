@@ -1,12 +1,12 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Kullanıcılar</h1>
-      <p>Şirket çalışanlarını yönet — rol, takım, hiyerarşi</p>
+      <h1>{{ 'users.title' | t }}</h1>
+      <p>{{ 'users.subtitle' | t }}</p>
     </div>
     <button class="btn-primary" (click)="startCreate()">
       <lucide-icon [img]="icons.UserPlus" size="13"></lucide-icon>
-      Yeni kullanıcı
+      {{ 'users.btn_new' | t }}
     </button>
   </header>
 
@@ -17,29 +17,29 @@
       <input
         type="text"
         class="search"
-        placeholder="Ad / email / account_id ara..."
+        [placeholder]="'users.search_placeholder' | t"
         [ngModel]="search()"
         (ngModelChange)="search.set($event)"
       />
     </div>
     <select class="dropdown" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
-      <option [ngValue]="null">Tüm roller</option>
+      <option [ngValue]="null">{{ 'users.role_all' | t }}</option>
       @for (r of roles.list(); track r.id) {
         <option [ngValue]="r.id">{{ r.name }}</option>
       }
     </select>
     <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
-      <option [ngValue]="null">Tüm takımlar</option>
+      <option [ngValue]="null">{{ 'users.team_all' | t }}</option>
       @for (t of teams.list(); track t.id) {
         <option [ngValue]="t.id">{{ t.name }}</option>
       }
     </select>
     <select class="dropdown" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
-      <option value="active">Aktif</option>
-      <option value="inactive">Pasif</option>
-      <option value="all">Hepsi</option>
+      <option value="active">{{ 'common.active' | t }}</option>
+      <option value="inactive">{{ 'common.inactive' | t }}</option>
+      <option value="all">{{ 'common.all' | t }}</option>
     </select>
-    <span class="result-count">{{ items().length }} kullanıcı</span>
+    <span class="result-count">{{ 'users.result_count' | t : { count: items().length } }}</span>
   </section>
 
   <!-- ============== Table ============== -->
@@ -48,22 +48,22 @@
       <table>
         <thead>
           <tr>
-            <th>Account ID</th>
-            <th>İsim / E-posta</th>
-            <th>Pozisyon</th>
-            <th>Rol</th>
-            <th>Takım</th>
-            <th>Yönetici</th>
-            <th>Durum</th>
-            <th>Eklendi</th>
+            <th>{{ 'users.th_account_id' | t }}</th>
+            <th>{{ 'users.th_name_email' | t }}</th>
+            <th>{{ 'users.th_position' | t }}</th>
+            <th>{{ 'users.th_role' | t }}</th>
+            <th>{{ 'users.th_team' | t }}</th>
+            <th>{{ 'users.th_manager' | t }}</th>
+            <th>{{ 'users.th_status' | t }}</th>
+            <th>{{ 'users.th_created' | t }}</th>
             <th class="actions-col"></th>
           </tr>
         </thead>
         <tbody>
           @if (loading()) {
-            <tr><td colspan="9" class="state">Yükleniyor...</td></tr>
+            <tr><td colspan="9" class="state">{{ 'common.loading' | t }}</td></tr>
           } @else if (items().length === 0) {
-            <tr><td colspan="9" class="state">Eşleşen kullanıcı yok</td></tr>
+            <tr><td colspan="9" class="state">{{ 'common.no_users' | t }}</td></tr>
           } @else {
             @for (u of items(); track u.id) {
               <tr [class.inactive]="!u.isActive" (click)="selectUser(u)">
@@ -84,27 +84,27 @@
                 <td class="manager">{{ managerName(u.managerAccountId) }}</td>
                 <td>
                   @if (u.isActive) {
-                    <span class="status-pill active">Aktif</span>
+                    <span class="status-pill active">{{ 'common.active' | t }}</span>
                   } @else {
-                    <span class="status-pill inactive">Pasif</span>
+                    <span class="status-pill inactive">{{ 'common.passive' | t }}</span>
                   }
                 </td>
                 <td class="created">{{ formatDate(u.createdAt) }}</td>
                 <td class="actions-col" (click)="$event.stopPropagation()">
-                  <button class="icon-btn" (click)="selectUser(u)" title="Düzenle">
+                  <button class="icon-btn" (click)="selectUser(u)" [title]="'common.edit' | t">
                     <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
                   </button>
                   @if (isAdmin() && u.isActive) {
-                    <button class="icon-btn warn" (click)="selectedId.set(u.id); openPasswordReset()" title="Parola sıfırla">
+                    <button class="icon-btn warn" (click)="selectedId.set(u.id); openPasswordReset()" [title]="'users.btn_reset_pwd' | t">
                       <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
                     </button>
                   }
                   @if (u.isActive) {
-                    <button class="icon-btn danger" (click)="askDelete(u.id)" title="Pasif et">
+                    <button class="icon-btn danger" (click)="askDelete(u.id)" [title]="'users.confirm_delete_btn' | t">
                       <lucide-icon [img]="icons.Trash2" size="12"></lucide-icon>
                     </button>
                   } @else {
-                    <button class="icon-btn success" (click)="selectedId.set(u.id); reactivate()" title="Yeniden aktif">
+                    <button class="icon-btn success" (click)="selectedId.set(u.id); reactivate()" [title]="'common.reactivate' | t">
                       <lucide-icon [img]="icons.Power" size="12"></lucide-icon>
                     </button>
                   }
@@ -124,17 +124,17 @@
       <header class="modal-head">
         <div>
           <div class="modal-title">
-            {{ creating() ? 'Yeni kullanıcı' : selected()?.name }}
+            {{ creating() ? ('users.modal_new' | t) : selected()?.name }}
           </div>
           @if (!creating() && selected(); as s) {
             <div class="modal-sub">
               <span class="acc-id">{{ s.accountId }}</span>
               <span class="dot-sep">·</span>
-              <span [class.muted-red]="!s.isActive">{{ s.isActive ? 'Aktif' : 'Pasif' }}</span>
+              <span [class.muted-red]="!s.isActive">{{ (s.isActive ? 'common.active' : 'common.passive') | t }}</span>
             </div>
           }
         </div>
-        <button class="x" (click)="closeDialog()" aria-label="Kapat">
+        <button class="x" (click)="closeDialog()" [attr.aria-label]="'common.close' | t">
           <lucide-icon [img]="icons.X" size="14"></lucide-icon>
         </button>
       </header>
@@ -142,28 +142,28 @@
       <div class="modal-body">
         <div class="form-grid">
           <div class="field">
-            <label>Account ID *</label>
+            <label>{{ 'users.field_account_id' | t }} *</label>
             <input
               type="text"
               class="input"
               [readonly]="!creating()"
               [ngModel]="form().accountId"
               (ngModelChange)="patch('accountId', ($event || '').toUpperCase())"
-              placeholder="örn. EMP500"
+              [placeholder]="'users.placeholder_account_id' | t"
             />
           </div>
           <div class="field">
-            <label>Email *</label>
+            <label>{{ 'users.field_email' | t }} *</label>
             <input
               type="email"
               class="input"
               [ngModel]="form().email"
               (ngModelChange)="patch('email', $event)"
-              placeholder="ornek@company.com"
+              [placeholder]="'users.placeholder_email' | t"
             />
           </div>
           <div class="field">
-            <label>İsim soyisim *</label>
+            <label>{{ 'users.field_name' | t }} *</label>
             <input
               type="text"
               class="input"
@@ -172,42 +172,42 @@
             />
           </div>
           <div class="field">
-            <label>Pozisyon</label>
+            <label>{{ 'users.field_position' | t }}</label>
             <input
               type="text"
               class="input"
               [ngModel]="form().position"
               (ngModelChange)="patch('position', $event)"
-              placeholder="örn. Senior Developer"
+              [placeholder]="'users.placeholder_position' | t"
             />
           </div>
           @if (creating()) {
             <div class="field">
-              <label>Parola *</label>
+              <label>{{ 'users.field_password' | t }} *</label>
               <input
                 type="password"
                 class="input"
                 [ngModel]="form().password"
                 (ngModelChange)="patch('password', $event)"
-                placeholder="En az 6 karakter"
+                [placeholder]="'users.placeholder_password' | t"
               />
             </div>
           }
           <div class="field">
-            <label>Rol *</label>
+            <label>{{ 'users.field_role' | t }} *</label>
             <select
               class="input"
               [ngModel]="form().roleId"
               (ngModelChange)="patch('roleId', $event)"
             >
-              <option [ngValue]="null">Seç...</option>
+              <option [ngValue]="null">{{ 'common.select' | t }}</option>
               @for (r of roles.list(); track r.id) {
                 <option [ngValue]="r.id">{{ r.name }}</option>
               }
             </select>
           </div>
           <div class="field">
-            <label>Takım</label>
+            <label>{{ 'users.field_team' | t }}</label>
             <select
               class="input"
               [ngModel]="form().teamId"
@@ -220,7 +220,7 @@
             </select>
           </div>
           <div class="field">
-            <label>Yönetici</label>
+            <label>{{ 'users.field_manager' | t }}</label>
             <select
               class="input"
               [ngModel]="form().managerAccountId"
@@ -239,7 +239,7 @@
                 [ngModel]="form().isActive"
                 (ngModelChange)="patch('isActive', $event)"
               />
-              Aktif
+              {{ 'users.field_active' | t }}
             </label>
           </div>
         </div>
@@ -249,18 +249,18 @@
             @if (isAdmin() && s.isActive) {
               <button class="btn-warn" (click)="openPasswordReset()">
                 <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
-                Parolayı sıfırla
+                {{ 'users.btn_reset_pwd' | t }}
               </button>
             }
             @if (s.isActive) {
               <button class="btn-danger" (click)="askDelete(s.id)">
                 <lucide-icon [img]="icons.Trash2" size="12"></lucide-icon>
-                Soft delete
+                {{ 'users.btn_soft_delete' | t }}
               </button>
             } @else {
               <button class="btn-success" (click)="reactivate()">
                 <lucide-icon [img]="icons.Power" size="12"></lucide-icon>
-                Yeniden aktif et
+                {{ 'users.btn_reactivate' | t }}
               </button>
             }
           </div>
@@ -268,14 +268,14 @@
       </div>
 
       <footer class="modal-foot">
-        <button class="btn-secondary" (click)="closeDialog()">İptal</button>
+        <button class="btn-secondary" (click)="closeDialog()">{{ 'common.cancel' | t }}</button>
         <button
           class="btn-primary"
           [disabled]="saving() || (!creating() && !isDirty())"
           (click)="save()"
         >
           <lucide-icon [img]="icons.Save" size="13"></lucide-icon>
-          {{ creating() ? 'Oluştur' : 'Kaydet' }}
+          {{ (creating() ? 'common.create' : 'common.save') | t }}
         </button>
       </footer>
     </div>
@@ -287,9 +287,9 @@
 
   @if (confirmDeleteId() !== null) {
     <app-confirm-dialog
-      title="Kullanıcıyı pasif et"
-      message="Kullanıcı listede pasif olarak gösterilecek. Workload kayıtları korunacak."
-      confirmLabel="Pasif et"
+      [title]="'users.confirm_delete_title' | t"
+      [message]="'users.confirm_delete_msg' | t"
+      [confirmLabel]="'users.confirm_delete_btn' | t"
       [danger]="true"
       (confirm)="confirmDelete()"
       (cancel)="cancelDelete()"

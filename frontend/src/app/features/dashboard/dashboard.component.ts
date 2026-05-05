@@ -13,6 +13,7 @@ import {
   TeamsService,
   UsersService,
 } from '../../core/services/users.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { UserListItem } from '../../core/models/admin';
 
 interface OrgNodeData {
@@ -36,7 +37,7 @@ const ROSTER_ROLES = new Set(['WORKER', 'TECH_LEAD']);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',

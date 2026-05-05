@@ -4,15 +4,39 @@
 }
 
 .login-page {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   color: var(--c-text-primary);
+  /* Top layer: the user-supplied hero image at /assets/images/login-bg.png
+   * — shown as-is, no tinting/overlay.
+   * Fallback layers: two radial gradients that show through when the image is missing. */
   background:
+    url('/assets/images/login-bg.png') center/cover no-repeat,
     radial-gradient(ellipse at top left, var(--c-surface) 0%, var(--c-bg) 50%),
     radial-gradient(ellipse at bottom right, #1E3A5F 0%, var(--c-bg) 50%);
+}
+
+.lang-switch-floating {
+  position: absolute;
+  top: 20px; right: 20px;
+  font-size: 11px; font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(15, 31, 58, 0.6);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  color: var(--c-text-secondary);
+  cursor: pointer; font-family: inherit;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(4px);
+  transition: color 0.15s, border-color 0.15s;
+}
+.lang-switch-floating:hover {
+  color: var(--c-teal);
+  border-color: var(--c-border-hover);
 }
 
 .login-grid {
@@ -51,6 +75,7 @@
 /* --- card --- */
 .card {
   background: var(--c-surface);
+  backdrop-filter: blur(30px);
   border: 1px solid var(--c-border);
   border-radius: 14px;
   padding: 32px;

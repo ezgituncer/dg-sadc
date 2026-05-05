@@ -23,6 +23,7 @@
 .tree-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 22px 18px; min-height: 420px;
+  backdrop-filter: blur(30px);
 }
 .tree-scroll {
   width: 100%;
@@ -106,6 +107,7 @@
   border-radius: 0 0 8px 8px;
   padding: 8px 12px 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.20);
+  backdrop-filter: blur(30px);
 }
 .roster-head {
   display: flex; justify-content: space-between; align-items: center;
@@ -228,6 +230,7 @@
 .side-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 14px;
+  backdrop-filter: blur(30px);
 }
 .side-head {
   display: flex; align-items: center; gap: 8px;

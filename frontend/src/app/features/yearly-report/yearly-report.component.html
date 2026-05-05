@@ -1,13 +1,13 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Yearly Report</h1>
-      <p>Kullanıcı bazlı aylık workload özeti — beklenen saatlere göre renklendirme</p>
+      <h1>{{ 'yearly_report.title' | t }}</h1>
+      <p>{{ 'yearly_report.subtitle' | t }}</p>
     </div>
     <div class="actions">
       <button class="btn-edit" type="button" (click)="openEditor()">
         <lucide-icon [img]="icons.Edit2" size="12"></lucide-icon>
-        {{ canEditWorkingDays() ? 'Working days düzenle' : 'Working days göster' }}
+        {{ (canEditWorkingDays() ? 'yearly_report.btn_edit_days' : 'yearly_report.btn_view_days') | t }}
       </button>
       <button
         class="btn-export"
@@ -16,7 +16,7 @@
         (click)="exportCsv()"
       >
         <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
-        Excel'e aktar
+        {{ 'common.export_excel' | t }}
       </button>
     </div>
   </header>
@@ -25,7 +25,7 @@
   <section class="filter-bar">
     <div class="filter-label">
       <lucide-icon [img]="icons.Calendar" size="11"></lucide-icon>
-      Yıl:
+      {{ 'yearly_report.filter_year' | t }}
     </div>
     <select class="dropdown" [ngModel]="year()" (ngModelChange)="year.set($event)">
       @for (y of availableYears; track y) {
@@ -33,60 +33,110 @@
       }
     </select>
     <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
-      <option [ngValue]="null">Tüm takımlar</option>
+      <option [ngValue]="null">{{ 'yearly_report.filter_team_all' | t }}</option>
       @for (t of teams.list(); track t.id) {
         <option [ngValue]="t.id">{{ t.name }}</option>
       }
     </select>
     <select class="dropdown" [ngModel]="projectFilter()" (ngModelChange)="projectFilter.set($event)">
-      <option [ngValue]="null">Tüm projeler</option>
+      <option [ngValue]="null">{{ 'yearly_report.filter_project_all' | t }}</option>
       @for (p of lookups.activeProjects(); track p.id) {
         <option [ngValue]="p.id">{{ p.name }}</option>
       }
     </select>
-    <div class="search-wrap">
-      <lucide-icon [img]="icons.Search" size="13" class="search-icon"></lucide-icon>
-      <input
-        type="text"
-        class="search"
-        placeholder="Kullanıcı ara..."
-        [ngModel]="search()"
-        (ngModelChange)="search.set($event)"
-      />
-    </div>
+    <button
+      #pickerTrigger
+      type="button"
+      class="user-picker-trigger"
+      [class.has-selection]="selectedCount() > 0"
+      (click)="$event.stopPropagation(); toggleUserPicker()"
+    >
+      <lucide-icon [img]="icons.UsersIcon" size="13"></lucide-icon>
+      <span>{{ userPickerLabel() }}</span>
+      <span class="caret">▾</span>
+    </button>
   </section>
+
+  <!-- User picker popover — rendered at the page root so it isn't trapped in the
+       filter-bar's `backdrop-filter` stacking context. position: fixed + viewport-anchored
+       coordinates computed from the trigger's getBoundingClientRect(). -->
+  @if (userPickerOpen()) {
+    <div class="user-picker-overlay" (click)="closeUserPicker()"></div>
+    @if (userPickerPos(); as pos) {
+      <div
+        class="user-picker-popover"
+        [style.top.px]="pos.top"
+        [style.left.px]="pos.left"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="user-picker-search">
+          <lucide-icon [img]="icons.Search" size="12" class="search-icon"></lucide-icon>
+          <input
+            type="text"
+            [ngModel]="userPickerFilter()"
+            (ngModelChange)="userPickerFilter.set($event)"
+            [placeholder]="'yearly_report.users_search_placeholder' | t"
+            autofocus
+          />
+        </div>
+        <div class="user-picker-list">
+          @if (directoryUsers().length === 0) {
+            <div class="user-picker-empty">{{ 'yearly_report.users_empty' | t }}</div>
+          } @else {
+            @for (u of directoryUsers(); track u.accountId) {
+              <label class="user-picker-item" [class.selected]="isUserSelected(u.accountId)">
+                <input
+                  type="checkbox"
+                  [checked]="isUserSelected(u.accountId)"
+                  (change)="toggleUserSelection(u.accountId)"
+                />
+                <span class="user-picker-name">{{ u.name }}</span>
+                <span class="user-picker-acc">{{ u.accountId }}</span>
+              </label>
+            }
+          }
+        </div>
+        @if (selectedCount() > 0) {
+          <button class="user-picker-clear" type="button" (click)="clearUserSelection()">
+            <lucide-icon [img]="icons.X" size="11"></lucide-icon>
+            {{ 'yearly_report.users_clear' | t }}
+          </button>
+        }
+      </div>
+    }
+  }
 
   <!-- KPI cards -->
   <section class="kpis">
     <div class="kpi accent-teal">
-      <div class="kpi-label">{{ year() }} Hedef</div>
-      <div class="kpi-value">{{ yearTargetTotal() }} <span>saat / kişi</span></div>
-      <div class="kpi-sub">{{ expectedDays().reduce(sumReducer, 0) }} working days × 8h</div>
+      <div class="kpi-label">{{ 'yearly_report.kpi_year_target' | t : { year: year() } }}</div>
+      <div class="kpi-value">{{ yearTargetTotal() }} <span>{{ 'yearly_report.kpi_year_target_unit' | t }}</span></div>
+      <div class="kpi-sub">{{ 'yearly_report.kpi_working_days_suffix' | t : { days: expectedDays().reduce(sumReducer, 0) } }}</div>
     </div>
     <div class="kpi accent-blue">
-      <div class="kpi-label">Toplam giriş</div>
-      <div class="kpi-value">{{ grandTotal().toFixed(1) }} <span>saat</span></div>
-      <div class="kpi-sub">{{ userCount() }} kullanıcı</div>
+      <div class="kpi-label">{{ 'yearly_report.kpi_total_entries' | t }}</div>
+      <div class="kpi-value">{{ grandTotal().toFixed(1) }} <span>{{ 'common.hours' | t }}</span></div>
+      <div class="kpi-sub">{{ 'yearly_report.kpi_total_users_suffix' | t : { count: userCount() } }}</div>
     </div>
     <div class="kpi accent-purple">
-      <div class="kpi-label">Ort. saat / kişi</div>
-      <div class="kpi-value">{{ avgPerUser().toFixed(1) }} <span>saat</span></div>
-      <div class="kpi-sub">yıllık ortalama</div>
+      <div class="kpi-label">{{ 'yearly_report.kpi_avg_per_user' | t }}</div>
+      <div class="kpi-value">{{ avgPerUser().toFixed(1) }} <span>{{ 'common.hours' | t }}</span></div>
+      <div class="kpi-sub">{{ 'yearly_report.kpi_year_avg_suffix' | t }}</div>
     </div>
     <div class="kpi accent-amber">
-      <div class="kpi-label">Genel doluluk</div>
+      <div class="kpi-label">{{ 'yearly_report.kpi_fill_rate' | t }}</div>
       <div class="kpi-value">{{ fillRatePct() }}<span>%</span></div>
-      <div class="kpi-sub">hedefe göre</div>
+      <div class="kpi-sub">{{ 'yearly_report.kpi_target_suffix' | t }}</div>
     </div>
   </section>
 
   <!-- Color legend -->
   <div class="legend">
-    <span class="legend-label">Renk açıklaması:</span>
-    <span class="legend-item"><span class="swatch green"></span>Hedef üstü (&gt;100%)</span>
-    <span class="legend-item"><span class="swatch none"></span>Tam (100%)</span>
-    <span class="legend-item"><span class="swatch yellow"></span>Eksik (50–99%)</span>
-    <span class="legend-item"><span class="swatch red"></span>Çok düşük (&lt;50%)</span>
+    <span class="legend-label">{{ 'yearly_report.legend_label' | t }}</span>
+    <span class="legend-item"><span class="swatch green"></span>{{ 'yearly_report.legend_green' | t }}</span>
+    <span class="legend-item"><span class="swatch none"></span>{{ 'yearly_report.legend_full' | t }}</span>
+    <span class="legend-item"><span class="swatch yellow"></span>{{ 'yearly_report.legend_yellow' | t }}</span>
+    <span class="legend-item"><span class="swatch red"></span>{{ 'yearly_report.legend_red' | t }}</span>
   </div>
 
   <!-- Matrix -->
@@ -105,7 +155,7 @@
                   }
                 </button>
               }
-              Kullanıcı
+              {{ 'yearly_report.th_user' | t }}
             </th>
             @for (m of trMonths; track $index) {
               <th class="month-col">
@@ -113,16 +163,16 @@
                 <div class="sub">{{ expectedDays()[$index] }}d/{{ expectedDays()[$index] * 8 }}h</div>
               </th>
             }
-            <th class="total-col">Toplam</th>
+            <th class="total-col">{{ 'yearly_report.th_total' | t }}</th>
           </tr>
         </thead>
         <tbody>
           @if (loading()) {
-            <tr><td [attr.colspan]="14" class="state">Yükleniyor...</td></tr>
+            <tr><td [attr.colspan]="14" class="state">{{ 'common.loading' | t }}</td></tr>
           } @else if (userCount() === 0) {
-            <tr><td [attr.colspan]="14" class="state">Filtreyle eşleşen kullanıcı bulunamadı</td></tr>
+            <tr><td [attr.colspan]="14" class="state">{{ 'yearly_report.state_no_users' | t }}</td></tr>
           } @else {
-            @for (row of report()?.rows ?? []; track row.user.accountId) {
+            @for (row of visibleRows(); track row.user.accountId) {
               <tr>
                 <td class="sticky-left user-cell">
                   <div class="user-row">
@@ -189,7 +239,7 @@
         @if (userCount() > 0) {
           <tfoot>
             <tr>
-              <td class="sticky-left foot-label">Şirket toplamı</td>
+              <td class="sticky-left foot-label">{{ 'yearly_report.company_total' | t }}</td>
               @for (h of columnTotals(); track $index) {
                 <td class="foot-cell">{{ h > 0 ? h.toFixed(0) : '—' }}</td>
               }

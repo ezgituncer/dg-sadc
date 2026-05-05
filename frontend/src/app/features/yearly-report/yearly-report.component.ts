@@ -2,9 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   effect,
+  HostListener,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,12 +20,16 @@ import {
   Plus,
   X,
   AlertCircle,
+  Users as UsersIcon,
+  Check,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { ReportService } from '../../core/services/report.service';
-import { TeamsService } from '../../core/services/users.service';
+import { TeamsService, UsersService } from '../../core/services/users.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { YearlyReport } from '../../core/models/report';
 import {
   getCellTone,
@@ -42,6 +49,7 @@ import { WorkingDaysEditorComponent } from './working-days-editor.component';
     LucideAngularModule,
     ToastComponent,
     WorkingDaysEditorComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './yearly-report.component.html',
@@ -51,9 +59,11 @@ export class YearlyReportComponent {
   private readonly auth = inject(AuthService);
   protected readonly lookups = inject(LookupService);
   protected readonly teams = inject(TeamsService);
+  protected readonly usersDir = inject(UsersService);
   private readonly reportApi = inject(ReportService);
+  private readonly localeSvc = inject(LocaleService);
 
-  readonly icons = { Calendar, Search, Save, Edit2, Plus, X, AlertCircle };
+  readonly icons = { Calendar, Search, Save, Edit2, Plus, X, AlertCircle, UsersIcon, Check };
   readonly trMonths = TR_MONTHS_SHORT;
   readonly trMonthsFull = TR_MONTHS_FULL;
 
@@ -68,8 +78,20 @@ export class YearlyReportComponent {
   readonly year = signal(this.currentYear);
   readonly teamFilter = signal<number | null>(null);
   readonly projectFilter = signal<number | null>(null);
-  readonly search = signal('');
   readonly includeBreakdown = signal(true);
+
+  // User multi-select: empty Set means "all users"; otherwise show only these accountIds.
+  readonly selectedAccountIds = signal<Set<string>>(new Set());
+
+  // Dropdown UI state for the user picker
+  readonly userPickerOpen = signal(false);
+  readonly userPickerFilter = signal('');
+  /** Viewport-anchored position of the popover; recomputed each open from the trigger button. */
+  readonly userPickerPos = signal<{ top: number; left: number } | null>(null);
+
+  /** Trigger button ref — used to anchor the popover (which is rendered at the page root
+   *  to escape the filter-bar's `backdrop-filter` stacking context). */
+  private readonly pickerTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('pickerTrigger');
 
   // --- data ---
   readonly report = signal<YearlyReport | null>(null);
@@ -89,12 +111,19 @@ export class YearlyReportComponent {
     return r ? parseFloat(r.yearTargetHours) : 0;
   });
 
-  readonly grandTotal = computed(() => {
-    const r = this.report();
-    return r ? parseFloat(r.grandTotal) : 0;
+  /** Rows shown in the matrix — filtered by the user multi-select if any are picked. */
+  readonly visibleRows = computed(() => {
+    const all = this.report()?.rows ?? [];
+    const sel = this.selectedAccountIds();
+    if (sel.size === 0) return all;
+    return all.filter((r) => sel.has(r.user.accountId));
   });
 
-  readonly userCount = computed(() => this.report()?.rows.length ?? 0);
+  readonly userCount = computed(() => this.visibleRows().length);
+
+  readonly grandTotal = computed(() =>
+    this.visibleRows().reduce((s, r) => s + parseFloat(r.yearTotal), 0),
+  );
 
   readonly avgPerUser = computed(() => {
     const n = this.userCount();
@@ -109,19 +138,42 @@ export class YearlyReportComponent {
   });
 
   readonly columnTotals = computed(() => {
-    const r = this.report();
-    return r ? r.columnTotals.map((s) => parseFloat(s)) : new Array(12).fill(0);
+    const rows = this.visibleRows();
+    const totals = new Array(12).fill(0);
+    for (const row of rows) {
+      row.hoursByMonth.forEach((h, i) => { totals[i] += parseFloat(h) || 0; });
+    }
+    return totals;
   });
 
   readonly expectedDays = computed(() => this.report()?.expectedWorkingDays ?? new Array(12).fill(22));
 
+  /** Sorted directory used to populate the user picker. */
+  readonly directoryUsers = computed(() => {
+    // The directory is a Map<accountId, entry>; we surface it as a sorted array.
+    // Reading the signal keeps this computed reactive when the directory loads.
+    const map = this.usersDir.directory();
+    const items = Array.from(map.values());
+    const filter = this.userPickerFilter().trim().toLowerCase();
+    const filtered = filter
+      ? items.filter(
+          (u) =>
+            u.name.toLowerCase().includes(filter) ||
+            u.accountId.toLowerCase().includes(filter),
+        )
+      : items;
+    return filtered.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  });
+
+  readonly selectedCount = computed(() => this.selectedAccountIds().size);
+
   constructor() {
     effect(() => {
+      // The user multi-select is applied client-side, so it isn't part of the server filters.
       const filters = {
         year: this.year(),
         teamId: this.teamFilter(),
         projectId: this.projectFilter(),
-        search: this.search().trim() || undefined,
         includeBreakdown: this.includeBreakdown(),
       };
       this.fetchReport(filters);
@@ -147,7 +199,6 @@ export class YearlyReportComponent {
       year: this.year(),
       teamId: this.teamFilter(),
       projectId: this.projectFilter(),
-      search: this.search().trim() || undefined,
       includeBreakdown: this.includeBreakdown(),
     });
   }
@@ -165,7 +216,7 @@ export class YearlyReportComponent {
   }
 
   toggleAllRows(): void {
-    const rows = this.report()?.rows ?? [];
+    const rows = this.visibleRows();
     if (this.expandedRows().size === rows.length) {
       this.expandedRows.set(new Set());
     } else {
@@ -174,8 +225,61 @@ export class YearlyReportComponent {
   }
 
   allExpanded(): boolean {
-    const rows = this.report()?.rows ?? [];
+    const rows = this.visibleRows();
     return rows.length > 0 && this.expandedRows().size === rows.length;
+  }
+
+  // --- User multi-select picker ---
+  toggleUserPicker(): void {
+    const next = !this.userPickerOpen();
+    this.userPickerOpen.set(next);
+    if (next) {
+      this.recomputePickerPosition();
+    } else {
+      this.userPickerFilter.set('');
+    }
+  }
+  closeUserPicker(): void {
+    this.userPickerOpen.set(false);
+    this.userPickerFilter.set('');
+  }
+
+  private recomputePickerPosition(): void {
+    const el = this.pickerTriggerRef()?.nativeElement;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const popoverWidth = 320;
+    // Right-align the popover with the trigger; clamp to the viewport so it stays visible.
+    const left = Math.max(8, Math.min(window.innerWidth - popoverWidth - 8, rect.right - popoverWidth));
+    this.userPickerPos.set({ top: rect.bottom + 6, left });
+  }
+
+  /** Reposition the popover when the layout shifts. */
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  onWindowChange(): void {
+    if (!this.userPickerOpen()) return;
+    this.recomputePickerPosition();
+  }
+  toggleUserSelection(accountId: string): void {
+    this.selectedAccountIds.update((s) => {
+      const next = new Set(s);
+      if (next.has(accountId)) next.delete(accountId);
+      else next.add(accountId);
+      return next;
+    });
+  }
+  isUserSelected(accountId: string): boolean {
+    return this.selectedAccountIds().has(accountId);
+  }
+  clearUserSelection(): void {
+    this.selectedAccountIds.set(new Set());
+  }
+  userPickerLabel(): string {
+    const n = this.selectedCount();
+    if (n === 0) return this.localeSvc.t('yearly_report.users_all');
+    if (n === 1) return this.localeSvc.t('yearly_report.users_selected_one');
+    return this.localeSvc.t('yearly_report.users_selected_many', { count: n });
   }
 
   // --- coloring helpers used by the template ---
@@ -233,12 +337,12 @@ export class YearlyReportComponent {
     this.editorOpen.set(false);
     this.reportApi.saveWorkingDays(this.year(), months).subscribe({
       next: () => {
-        this.flashToast(`${this.year()} working days güncellendi`, 'success');
+        this.flashToast(this.localeSvc.t('yearly_report.saved_msg', { year: this.year() }), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Güncellenemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
       },
     });
   }
@@ -246,7 +350,8 @@ export class YearlyReportComponent {
   // --- CSV export (client-side) ---
   exportCsv(): void {
     const r = this.report();
-    if (!r || r.rows.length === 0) return;
+    const rows = this.visibleRows();
+    if (!r || rows.length === 0) return;
 
     const target = this.yearTargetTotal();
     const headerRow1 = ['Yearly Report', String(r.year)];
@@ -263,7 +368,7 @@ export class YearlyReportComponent {
       '',
     ];
     const dataRows: (string | number)[][] = [];
-    r.rows.forEach((row) => {
+    rows.forEach((row) => {
       const total = parseFloat(row.yearTotal);
       const pct = target > 0 ? Math.round((total / target) * 100) : 0;
       dataRows.push([
@@ -312,7 +417,10 @@ export class YearlyReportComponent {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    this.flashToast(`${r.rows.length} kullanıcı için rapor indirildi`, 'success');
+    this.flashToast(
+      this.localeSvc.t('yearly_report.export_done', { count: rows.length }),
+      'success',
+    );
   }
 
   private flashToast(message: string, kind: 'success' | 'error'): void {

@@ -27,6 +27,7 @@
 .filter-bar {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 12px; margin-bottom: 14px;
+  backdrop-filter: blur(30px);
   display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
 }
 .filter-label {
@@ -48,12 +49,119 @@
   color: var(--c-text-primary); font-size: 12px; outline: none; font-family: inherit;
 }
 
+/* --- User multi-select trigger (sits inline in the filter bar, next to the project dropdown) --- */
+.user-picker-trigger {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  color: var(--c-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 200px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.user-picker-trigger:hover { border-color: var(--c-border-hover); }
+.user-picker-trigger.has-selection {
+  border-color: var(--c-border-hover);
+  color: var(--c-teal);
+}
+.user-picker-trigger .caret { margin-left: auto; font-size: 10px; color: var(--c-text-muted); }
+
+/* Popover is rendered at the component root (outside .filter-bar) and uses
+ * position: fixed so it escapes the filter-bar's backdrop-filter stacking context.
+ * Coordinates come from the component (computed via getBoundingClientRect on the trigger). */
+.user-picker-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+}
+
+.user-picker-popover {
+  position: fixed;
+  z-index: 1001;
+  width: 320px; max-height: 380px;
+  background: var(--c-surface);
+  backdrop-filter: blur(30px);
+  border: 1px solid var(--c-border-hover);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.user-picker-search {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-border);
+}
+.user-picker-search .search-icon {
+  position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  color: var(--c-text-muted);
+}
+.user-picker-search input {
+  width: 100%; padding: 6px 10px 6px 30px; box-sizing: border-box;
+  background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 5px;
+  color: var(--c-text-primary); font-size: 12px; outline: none; font-family: inherit;
+}
+.user-picker-search input:focus { border-color: var(--c-border-focus); }
+
+.user-picker-list {
+  flex: 1; overflow-y: auto;
+  padding: 4px;
+}
+
+.user-picker-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: 11px;
+}
+
+.user-picker-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--c-text-primary);
+}
+.user-picker-item:hover { background: var(--c-surface-hover); }
+.user-picker-item.selected { background: rgba(45, 212, 191, 0.10); }
+.user-picker-item input[type=checkbox] {
+  margin: 0;
+  accent-color: var(--c-teal);
+}
+.user-picker-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-picker-acc {
+  font-family: monospace; font-size: 10px;
+  color: var(--c-text-muted);
+}
+
+.user-picker-clear {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-top: 1px solid var(--c-border);
+  background: rgba(239, 68, 68, 0.05);
+  color: var(--c-red);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.user-picker-clear:hover { background: rgba(239, 68, 68, 0.12); }
+
 /* --- KPIs --- */
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
 @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
 .kpi {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 14px; position: relative; overflow: hidden;
+  backdrop-filter: blur(30px);
 }
 .kpi::before {
   content: ''; position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: var(--c-teal);
@@ -87,6 +195,7 @@
 .table-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; overflow: hidden;
+  backdrop-filter: blur(30px);
 }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1100px; }
@@ -107,7 +216,7 @@ thead th.total-col {
   text-align: right; min-width: 90px; color: var(--c-teal);
 }
 
-.sticky-left { position: sticky; left: 0; z-index: 1; background: var(--c-surface); }
+.sticky-left { position: sticky; left: 0; z-index: 1; background: var(--c-surface);backdrop-filter: blur(30px); }
 thead th.sticky-left { z-index: 2; background: var(--c-surface-deep); min-width: 250px; }
 
 .expand-all, .expand-btn {

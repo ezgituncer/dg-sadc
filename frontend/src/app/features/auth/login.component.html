@@ -1,4 +1,14 @@
 <div class="login-page">
+  <button
+    type="button"
+    class="lang-switch-floating"
+    [attr.aria-label]="'language.switch_aria' | t"
+    [title]="'language.switch_aria' | t"
+    (click)="localeSvc.toggle()"
+  >
+    {{ localeSvc.locale() === 'tr' ? 'EN' : 'TR' }}
+  </button>
+
   <div class="login-grid">
     <!-- LEFT: Branding -->
     <div class="branding">
@@ -10,24 +20,23 @@
         </div>
       </div>
       <h1 class="brand-headline">
-        Şirket workload <span class="accent">takibi</span> tek panelde
+        {{ 'login.headline_part1' | t }}
+        <span class="accent">{{ 'login.headline_accent' | t }}</span>
+        {{ 'login.headline_part2' | t }}
       </h1>
-      <p class="brand-blurb">
-        Çalışmalarını saat bazında kaydet, takım performansını izle, raporlar oluştur. Tüm
-        şirket genelinde tek bir merkezi sistem.
-      </p>
+      <p class="brand-blurb">{{ 'login.blurb' | t }}</p>
       <div class="bullets">
         <div class="bullet">
           <span class="dot dot-teal"></span>
-          Saat bazında detaylı workload kaydı
+          {{ 'login.bullet_hours' | t }}
         </div>
         <div class="bullet">
           <span class="dot dot-blue"></span>
-          Takım ve proje bazlı raporlama
+          {{ 'login.bullet_reports' | t }}
         </div>
         <div class="bullet">
           <span class="dot dot-purple"></span>
-          Rol bazlı yetki yönetimi
+          {{ 'login.bullet_roles' | t }}
         </div>
       </div>
     </div>
@@ -35,13 +44,13 @@
     <!-- RIGHT: Login card -->
     <div class="card">
       <div class="card-head">
-        <h2>Giriş yap</h2>
-        <p>Hesabınla devam et</p>
+        <h2>{{ 'login.title' | t }}</h2>
+        <p>{{ 'login.subtitle' | t }}</p>
       </div>
 
       <form (ngSubmit)="submit()" (keydown.enter)="submit()" autocomplete="on">
         <div class="field">
-          <label>Email</label>
+          <label>{{ 'login.email' | t }}</label>
           <div class="input-wrap">
             <lucide-icon [img]="icons.Mail" size="14" class="icon-left"></lucide-icon>
             <input
@@ -50,13 +59,13 @@
               (ngModelChange)="email.set($event)"
               name="email"
               autocomplete="username"
-              placeholder="ornek@company.com"
+              [placeholder]="'login.email_placeholder' | t"
             />
           </div>
         </div>
 
         <div class="field">
-          <label>Parola</label>
+          <label>{{ 'login.password' | t }}</label>
           <div class="input-wrap">
             <lucide-icon [img]="icons.Lock" size="14" class="icon-left"></lucide-icon>
             <input
@@ -65,7 +74,7 @@
               (ngModelChange)="password.set($event)"
               name="password"
               autocomplete="current-password"
-              placeholder="••••••••"
+              [placeholder]="'login.password_placeholder' | t"
             />
           </div>
         </div>
@@ -80,15 +89,15 @@
         <button type="submit" class="submit" [disabled]="loading()">
           @if (loading()) {
             <lucide-icon [img]="icons.Loader2" size="14" class="spin"></lucide-icon>
-            <span>Giriş yapılıyor...</span>
+            <span>{{ 'login.submitting' | t }}</span>
           } @else {
-            <span>Giriş yap</span>
+            <span>{{ 'login.submit' | t }}</span>
           }
         </button>
 
         <div class="forgot">
-          Parolanı mı unuttun?
-          <span class="forgot-strong">Yönetici ile iletişime geç.</span>
+          {{ 'login.forgot' | t }}
+          <span class="forgot-strong">{{ 'login.forgot_action' | t }}</span>
         </div>
       </form>
 
@@ -96,7 +105,7 @@
         <div class="hint">
           <button type="button" class="hint-toggle" (click)="toggleHint()">
             <span class="amber-dot">●</span>
-            Mock test hesapları {{ hintOpen() ? '▲' : '▼' }}
+            {{ 'login.seed_hint' | t }} {{ hintOpen() ? '▲' : '▼' }}
           </button>
           @if (hintOpen()) {
             <div class="hint-list">

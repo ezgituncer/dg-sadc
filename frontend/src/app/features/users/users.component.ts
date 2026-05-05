@@ -20,12 +20,14 @@ import {
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
 import {
   RolesService,
   TeamsService,
   UsersService,
   UserFilters,
 } from '../../core/services/users.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import {
   UserCreatePayload,
   UserListItem,
@@ -69,6 +71,7 @@ const EMPTY_FORM: FormState = {
     ToastComponent,
     ConfirmDialogComponent,
     PasswordResetDialogComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './users.component.html',
@@ -79,6 +82,7 @@ export class UsersComponent {
   private readonly api = inject(UsersService);
   protected readonly roles = inject(RolesService);
   protected readonly teams = inject(TeamsService);
+  private readonly localeSvc = inject(LocaleService);
 
   readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X };
 
@@ -208,7 +212,7 @@ export class UsersComponent {
     if (this.creating()) {
       const f = this.form();
       if (!f.accountId || !f.email || !f.name || !f.password || !f.roleId) {
-        this.flashToast('Zorunlu alanları doldur', 'error');
+        this.flashToast(this.localeSvc.t('common.required'), 'error');
         return;
       }
       const payload: UserCreatePayload = {
@@ -226,14 +230,14 @@ export class UsersComponent {
       this.api.create(payload).subscribe({
         next: () => {
           this.saving.set(false);
-          this.flashToast('Kullanıcı oluşturuldu', 'success');
+          this.flashToast(this.localeSvc.t('users.toast_created'), 'success');
           this.closeDialog();
           this.refetch();
         },
         error: (err) => {
           this.saving.set(false);
           const detail = err?.error?.detail;
-          this.flashToast(typeof detail === 'string' ? detail : 'Kaydedilemedi', 'error');
+          this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
         },
       });
     } else {
@@ -253,14 +257,14 @@ export class UsersComponent {
       this.api.update(id, payload).subscribe({
         next: () => {
           this.saving.set(false);
-          this.flashToast('Kayıt güncellendi', 'success');
+          this.flashToast(this.localeSvc.t('common.saved'), 'success');
           this.closeDialog();
           this.refetch();
         },
         error: (err) => {
           this.saving.set(false);
           const detail = err?.error?.detail;
-          this.flashToast(typeof detail === 'string' ? detail : 'Kaydedilemedi', 'error');
+          this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
         },
       });
     }
@@ -288,12 +292,12 @@ export class UsersComponent {
     this.confirmDeleteId.set(null);
     this.api.softDelete(id).subscribe({
       next: () => {
-        this.flashToast('Kullanıcı pasif edildi', 'success');
+        this.flashToast(this.localeSvc.t('users.toast_deactivated'), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Silinemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_delete'), 'error');
       },
     });
   }
@@ -303,12 +307,12 @@ export class UsersComponent {
     if (id == null) return;
     this.api.activate(id).subscribe({
       next: () => {
-        this.flashToast('Kullanıcı yeniden aktif', 'success');
+        this.flashToast(this.localeSvc.t('users.toast_reactivated'), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Aktive edilemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
       },
     });
   }
@@ -326,10 +330,10 @@ export class UsersComponent {
     this.resetPasswordTarget.set(null);
     if (!u) return;
     this.api.resetPassword(u.id, newPassword).subscribe({
-      next: () => this.flashToast('Parola sıfırlandı', 'success'),
+      next: () => this.flashToast(this.localeSvc.t('users.toast_pwd_reset'), 'success'),
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Parola sıfırlanamadı', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('users.toast_pwd_failed'), 'error');
       },
     });
   }
@@ -369,6 +373,7 @@ export class UsersComponent {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+    const tag = this.localeSvc.locale() === 'en' ? 'en-GB' : 'tr-TR';
+    return d.toLocaleDateString(tag, { day: '2-digit', month: 'short', year: 'numeric' });
   }
 }

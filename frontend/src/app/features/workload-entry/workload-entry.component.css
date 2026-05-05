@@ -16,6 +16,7 @@
 .form-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 20px;
+  backdrop-filter: blur(30px);
 }
 
 .date-bar {
@@ -63,6 +64,22 @@
   border: 1px solid rgba(45, 212, 191, 0.25);
   color: var(--c-teal);
 }
+.banner.info {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: var(--c-text-secondary);
+  justify-content: flex-start;
+  align-items: flex-start;
+  line-height: 1.45;
+  margin-top: -6px;       /* tuck closer under the activity-type segmented control */
+  margin-bottom: 14px;
+}
+.banner.info lucide-icon {
+  color: var(--c-blue);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.banner.info strong { color: var(--c-text-primary); font-weight: 600; }
 .banner .row { display: flex; align-items: center; gap: 8px; }
 .link-btn {
   background: transparent; border: none; color: var(--c-teal);
@@ -140,6 +157,7 @@
 .panel {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 18px;
+  backdrop-filter: blur(30px);
 }
 .panel.grow { flex: 1; min-height: 280px; }
 

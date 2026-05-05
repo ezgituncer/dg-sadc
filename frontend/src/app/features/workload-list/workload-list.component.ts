@@ -26,6 +26,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { UsersService } from '../../core/services/users.service';
 import { WorkloadService } from '../../core/services/workload.service';
@@ -36,6 +37,7 @@ import {
 } from '../../core/models/workload';
 import { ToastComponent } from '../../shared/components/toast.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { isoDaysAgo, isoToday, isWithinEditWindow } from '../../shared/utils/date.utils';
 import { environment } from '../../../environments/environment';
 
@@ -56,6 +58,7 @@ const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
     ToastComponent,
     ConfirmDialogComponent,
     BaseChartDirective,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './workload-list.component.html',
@@ -66,6 +69,7 @@ export class WorkloadListComponent {
   protected readonly lookups = inject(LookupService);
   protected readonly users = inject(UsersService);
   private readonly api = inject(WorkloadService);
+  private readonly localeSvc = inject(LocaleService);
 
   readonly icons = {
     Calendar, Search, Save, X, Edit2, Trash2, ChevronLeft, ChevronRight,
@@ -372,10 +376,13 @@ export class WorkloadListComponent {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(objectUrl);
-        this.flashToast(`${this.total()} kayıt CSV olarak indirildi`, 'success');
+        this.flashToast(
+          this.localeSvc.t('workload_list.csv_done', { count: this.total() }),
+          'success',
+        );
       })
       .catch(() => {
-        this.flashToast('CSV indirme başarısız', 'error');
+        this.flashToast(this.localeSvc.t('workload_list.csv_failed'), 'error');
       });
   }
 
@@ -391,12 +398,12 @@ export class WorkloadListComponent {
     this.confirmDeleteId.set(null);
     this.api.delete(id).subscribe({
       next: () => {
-        this.flashToast('Kayıt silindi', 'success');
+        this.flashToast(this.localeSvc.t('common.deleted'), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Silinemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_delete'), 'error');
       },
     });
   }

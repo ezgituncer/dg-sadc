@@ -11,21 +11,22 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, X } from 'lucide-angular';
 
 import { TR_MONTHS_FULL } from '../../shared/utils/cell-tone';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 
 @Component({
   selector: 'app-working-days-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="overlay" (click)="close.emit()"></div>
     <div class="dialog">
       <header>
         <div>
-          <div class="title">{{ year() }} working days</div>
-          <div class="hint">Her ay için beklenen çalışma günü sayısı (resmi tatiller hariç)</div>
+          <div class="title">{{ 'yearly_report.editor_title' | t : { year: year() } }}</div>
+          <div class="hint">{{ 'yearly_report.editor_hint' | t }}</div>
         </div>
-        <button class="x" (click)="close.emit()" aria-label="Kapat">
+        <button class="x" (click)="close.emit()" [attr.aria-label]="'common.close' | t">
           <lucide-icon [img]="closeIcon" size="16"></lucide-icon>
         </button>
       </header>
@@ -42,7 +43,7 @@ import { TR_MONTHS_FULL } from '../../shared/utils/cell-tone';
                 [ngModel]="values()[m.idx]"
                 (ngModelChange)="setValue(m.idx, $event)"
               />
-              <span class="unit">gün</span>
+              <span class="unit">{{ 'common.days' | t }}</span>
             </div>
           </div>
         }
@@ -50,13 +51,15 @@ import { TR_MONTHS_FULL } from '../../shared/utils/cell-tone';
 
       <footer>
         <div class="totals">
-          Toplam: <span class="strong">{{ totalDays() }}</span> gün ·
-          Hedef: <span class="teal">{{ totalHours() }}</span> saat / kişi
+          {{ 'yearly_report.editor_total' | t }}
+          <span class="strong">{{ totalDays() }}</span> {{ 'common.days' | t }} ·
+          {{ 'yearly_report.editor_target' | t }}
+          <span class="teal">{{ totalHours() }}</span> {{ 'yearly_report.editor_per_person' | t }}
         </div>
         <div class="actions">
-          <button class="btn-secondary" (click)="close.emit()">{{ canEdit() ? 'İptal' : 'Kapat' }}</button>
+          <button class="btn-secondary" (click)="close.emit()">{{ (canEdit() ? 'common.cancel' : 'common.close') | t }}</button>
           @if (canEdit()) {
-            <button class="btn-primary" (click)="save.emit(values())">Kaydet</button>
+            <button class="btn-primary" (click)="save.emit(values())">{{ 'common.save' | t }}</button>
           }
         </div>
       </footer>
@@ -67,7 +70,7 @@ import { TR_MONTHS_FULL } from '../../shared/utils/cell-tone';
     .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
     .dialog {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: var(--c-surface); border: 1px solid var(--c-border-hover); border-radius: 10px;
+      background: var(--c-surface); backdrop-filter: blur(30px);border: 1px solid var(--c-border-hover); border-radius: 10px;
       width: calc(100% - 40px); max-width: 540px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }

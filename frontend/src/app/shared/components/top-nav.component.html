@@ -13,13 +13,23 @@
             routerLinkActive="active"
           >
             <lucide-icon [img]="item.icon" size="13"></lucide-icon>
-            {{ item.label }}
+            {{ item.labelKey | t }}
           </a>
         }
       </nav>
     </div>
 
     <div class="right">
+      <button
+        type="button"
+        class="lang-switch"
+        [attr.aria-label]="'language.switch_aria' | t"
+        [title]="'language.switch_aria' | t"
+        (click)="toggleLocale()"
+      >
+        {{ localeService.locale() === 'tr' ? 'EN' : 'TR' }}
+      </button>
+
       <div class="role-chip">{{ roleLabel() }}</div>
 
       <button type="button" class="profile-btn" (click)="toggleProfile()">
@@ -39,11 +49,11 @@
             @if (user.position) {
               <div class="profile-position">{{ user.position }}</div>
             }
-            <div class="profile-id">ID: {{ user.accountId }}</div>
+            <div class="profile-id">{{ 'nav.id' | t }}: {{ user.accountId }}</div>
           </div>
           <button type="button" class="logout-btn" (click)="logout()">
             <lucide-icon [img]="logOutIcon" size="13"></lucide-icon>
-            Çıkış yap
+            {{ 'nav.logout' | t }}
           </button>
         </div>
       }

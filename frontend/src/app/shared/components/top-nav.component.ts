@@ -20,22 +20,25 @@ import {
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { RoleCode } from '../../core/models/role';
 
 interface MenuItem {
   key: string;
   path: string;
-  label: string;
+  /** Translation key under `nav.*` in the i18n dictionaries. */
+  labelKey: string;
   icon: LucideIconData;
 }
 
 const ALL_MENU: MenuItem[] = [
-  { key: 'dashboard',      path: '/dashboard',      label: 'Dashboard',         icon: LayoutDashboard },
-  { key: 'workload-entry', path: '/workload-entry', label: 'Workload entry',    icon: ClipboardList },
-  { key: 'workload-list',  path: '/workload-list',  label: 'Listings',          icon: FolderOpen },
-  { key: 'yearly-report',  path: '/yearly-report',  label: 'Yearly Report',     icon: BarChart3 },
-  { key: 'users',          path: '/users',          label: 'Users',             icon: Users },
-  { key: 'lookups',        path: '/lookups',        label: 'Yönetim',           icon: Settings },
+  { key: 'dashboard',      path: '/dashboard',      labelKey: 'nav.dashboard',       icon: LayoutDashboard },
+  { key: 'workload-entry', path: '/workload-entry', labelKey: 'nav.workload_entry',  icon: ClipboardList },
+  { key: 'workload-list',  path: '/workload-list',  labelKey: 'nav.workload_list',   icon: FolderOpen },
+  { key: 'yearly-report',  path: '/yearly-report',  labelKey: 'nav.yearly_report',   icon: BarChart3 },
+  { key: 'users',          path: '/users',          labelKey: 'nav.users',           icon: Users },
+  { key: 'lookups',        path: '/lookups',        labelKey: 'nav.lookups',         icon: Settings },
 ];
 
 const MENU_BY_ROLE: Record<RoleCode, string[]> = {
@@ -59,13 +62,14 @@ const ROLE_LABEL: Record<RoleCode, string> = {
 @Component({
   selector: 'app-top-nav',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, LucideAngularModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './top-nav.component.html',
   styleUrl: './top-nav.component.css',
 })
 export class TopNavComponent {
   private readonly authService = inject(AuthService);
+  protected readonly localeService = inject(LocaleService);
 
   readonly currentUser = this.authService.currentUser;
   readonly logOutIcon = LogOut;
@@ -76,6 +80,10 @@ export class TopNavComponent {
     const allowed = new Set(MENU_BY_ROLE[role] ?? []);
     return ALL_MENU.filter((m) => allowed.has(m.key));
   });
+
+  toggleLocale(): void {
+    this.localeService.toggle();
+  }
 
   readonly roleLabel = computed<string>(() => {
     const role = this.authService.roleCode();

@@ -1,12 +1,15 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule, KeyRound, X } from 'lucide-angular';
 
+import { LocaleService } from '../../core/services/locale.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
+
 @Component({
   selector: 'app-password-reset-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="overlay" (click)="cancel.emit()"></div>
@@ -14,20 +17,20 @@ import { LucideAngularModule, KeyRound, X } from 'lucide-angular';
       <header>
         <div class="title">
           <lucide-icon [img]="keyIcon" size="14"></lucide-icon>
-          {{ targetName() }} için parola sıfırla
+          {{ 'users.pwd_reset_title' | t : { name: targetName() } }}
         </div>
-        <button class="x" (click)="cancel.emit()" aria-label="Kapat">
+        <button class="x" (click)="cancel.emit()" [attr.aria-label]="'common.close' | t">
           <lucide-icon [img]="closeIcon" size="14"></lucide-icon>
         </button>
       </header>
 
       <div class="body">
-        <label>Yeni parola</label>
+        <label>{{ 'users.pwd_reset_label' | t }}</label>
         <input
           type="password"
           [ngModel]="value()"
           (ngModelChange)="value.set($event)"
-          placeholder="En az 6 karakter"
+          [placeholder]="'users.pwd_reset_placeholder' | t"
           autofocus
         />
         @if (error()) {
@@ -36,8 +39,8 @@ import { LucideAngularModule, KeyRound, X } from 'lucide-angular';
       </div>
 
       <footer>
-        <button class="btn-secondary" (click)="cancel.emit()">İptal</button>
-        <button class="btn-primary" (click)="submit()">Sıfırla</button>
+        <button class="btn-secondary" (click)="cancel.emit()">{{ 'common.cancel' | t }}</button>
+        <button class="btn-primary" (click)="submit()">{{ 'users.pwd_reset_btn' | t }}</button>
       </footer>
     </div>
   `,
@@ -67,6 +70,8 @@ import { LucideAngularModule, KeyRound, X } from 'lucide-angular';
   `],
 })
 export class PasswordResetDialogComponent {
+  private readonly localeSvc = inject(LocaleService);
+
   readonly targetName = input.required<string>();
   readonly confirm = output<string>();
   readonly cancel = output<void>();
@@ -79,7 +84,7 @@ export class PasswordResetDialogComponent {
   submit(): void {
     const v = this.value();
     if (v.length < 6) {
-      this.error.set('Parola en az 6 karakter olmalı');
+      this.error.set(this.localeSvc.t('users.pwd_too_short'));
       return;
     }
     this.confirm.emit(v);

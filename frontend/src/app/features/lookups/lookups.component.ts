@@ -26,24 +26,27 @@ import {
   LookupListItem,
   LookupUpdatePayload,
 } from '../../core/services/lookup-crud.service';
+import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { ToastComponent } from '../../shared/components/toast.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 
 interface Tab {
   kind: LookupKind;
-  label: string;
+  /** i18n key under `lookups.*` */
+  labelKey: string;
   hasColor: boolean;
   hasDescription: boolean;
 }
 
 const TABS: Tab[] = [
-  { kind: 'projects',                label: 'Projeler',                 hasColor: false, hasDescription: true },
-  { kind: 'activity-types',          label: 'Activity Types',           hasColor: false, hasDescription: true },
-  { kind: 'project-categories',      label: 'Proje Kategorileri',       hasColor: true,  hasDescription: false },
-  { kind: 'non-project-categories',  label: 'Non-Project Kategorileri', hasColor: true,  hasDescription: false },
-  { kind: 'self-imp-categories',     label: 'Self Imp Kategorileri',    hasColor: true,  hasDescription: false },
-  { kind: 'task-types',              label: 'Task Types',               hasColor: false, hasDescription: false },
+  { kind: 'projects',                labelKey: 'lookups.tab_projects',                 hasColor: false, hasDescription: true },
+  { kind: 'activity-types',          labelKey: 'lookups.tab_activity_types',           hasColor: false, hasDescription: true },
+  { kind: 'project-categories',      labelKey: 'lookups.tab_project_categories',       hasColor: true,  hasDescription: false },
+  { kind: 'non-project-categories',  labelKey: 'lookups.tab_non_project_categories',   hasColor: true,  hasDescription: false },
+  { kind: 'self-imp-categories',     labelKey: 'lookups.tab_self_imp_categories',      hasColor: true,  hasDescription: false },
+  { kind: 'task-types',              labelKey: 'lookups.tab_task_types',               hasColor: false, hasDescription: false },
 ];
 
 const COLOR_PALETTE = [
@@ -70,6 +73,7 @@ interface ModalState {
     LucideAngularModule,
     ToastComponent,
     ConfirmDialogComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lookups.component.html',
@@ -78,6 +82,7 @@ interface ModalState {
 export class LookupsComponent {
   private readonly api = inject(LookupCrudService);
   private readonly lookups = inject(LookupService);
+  private readonly localeSvc = inject(LocaleService);
 
   readonly icons = { Plus, Edit2, Trash2, Power, Search, X, Save };
   readonly tabs = TABS;
@@ -174,11 +179,11 @@ export class LookupsComponent {
     const m = this.modal();
     if (!m || this.saving()) return;
     if (m.mode === 'create' && !/^[A-Z0-9_-]+$/.test(m.code)) {
-      this.codeError.set('Kod sadece büyük harf, rakam, _ ve - içerebilir');
+      this.codeError.set(this.localeSvc.t('lookups.code_regex_msg'));
       return;
     }
     if (!m.name.trim()) {
-      this.flashToast('İsim zorunlu', 'error');
+      this.flashToast(this.localeSvc.t('lookups.name_required_msg'), 'error');
       return;
     }
     this.saving.set(true);
@@ -194,7 +199,7 @@ export class LookupsComponent {
         next: () => {
           this.saving.set(false);
           this.closeModal();
-          this.flashToast('Eklendi', 'success');
+          this.flashToast(this.localeSvc.t('lookups.toast_added'), 'success');
           this.refetch();
         },
         error: (err) => this.handleSaveError(err),
@@ -207,7 +212,7 @@ export class LookupsComponent {
         next: () => {
           this.saving.set(false);
           this.closeModal();
-          this.flashToast('Güncellendi', 'success');
+          this.flashToast(this.localeSvc.t('lookups.toast_updated'), 'success');
           this.refetch();
         },
         error: (err) => this.handleSaveError(err),
@@ -218,7 +223,7 @@ export class LookupsComponent {
   private handleSaveError(err: any): void {
     this.saving.set(false);
     const detail = err?.error?.detail;
-    this.flashToast(typeof detail === 'string' ? detail : 'İşlem başarısız', 'error');
+    this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('lookups.toast_failed'), 'error');
   }
 
   askDelete(item: LookupListItem): void {
@@ -233,12 +238,12 @@ export class LookupsComponent {
     if (!target) return;
     this.api.softDelete(this.activeTab().kind, target.id).subscribe({
       next: () => {
-        this.flashToast('Pasif edildi', 'success');
+        this.flashToast(this.localeSvc.t('lookups.toast_deactivated'), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Silinemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_delete'), 'error');
       },
     });
   }
@@ -246,12 +251,12 @@ export class LookupsComponent {
   reactivate(item: LookupListItem): void {
     this.api.activate(this.activeTab().kind, item.id).subscribe({
       next: () => {
-        this.flashToast('Yeniden aktif', 'success');
+        this.flashToast(this.localeSvc.t('lookups.toast_reactivated'), 'success');
         this.refetch();
       },
       error: (err) => {
         const detail = err?.error?.detail;
-        this.flashToast(typeof detail === 'string' ? detail : 'Aktive edilemedi', 'error');
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
       },
     });
   }

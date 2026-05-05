@@ -11,6 +11,8 @@ import {
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
+import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { environment } from '../../../environments/environment';
 
 interface SeedAccount {
@@ -23,7 +25,7 @@ interface SeedAccount {
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
@@ -31,6 +33,7 @@ interface SeedAccount {
 export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  protected readonly localeSvc = inject(LocaleService);
 
   readonly showSeedHint = environment.showSeedAccountsHint;
 
@@ -56,7 +59,7 @@ export class LoginComponent {
     const email = this.email().trim();
     const password = this.password();
     if (!email || !password) {
-      this.error.set('Email ve parola zorunludur');
+      this.error.set(this.localeSvc.t('login.error_required'));
       return;
     }
     this.loading.set(true);
@@ -69,7 +72,7 @@ export class LoginComponent {
         this.loading.set(false);
         const detail = err?.error?.detail;
         this.error.set(
-          typeof detail === 'string' ? detail : 'Email veya parola hatalı',
+          typeof detail === 'string' ? detail : this.localeSvc.t('login.error_invalid'),
         );
       },
     });

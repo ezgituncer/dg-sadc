@@ -20,7 +20,14 @@ import { TopNavComponent } from './top-nav.component';
   `,
   styles: [
     `
-      :host { display: block; min-height: 100vh; background: var(--c-bg); color: var(--c-text-primary); }
+      :host {
+        display: block;
+        min-height: 100vh;
+        color: var(--c-text-primary);
+        /* User-supplied /assets/images/app-bg.png — shown as-is, fixed on scroll.
+         * The html element carries the solid base color as a backstop if the image is missing. */
+        background: url('/assets/images/app-bg.png') center/cover no-repeat fixed;
+      }
       .shell { display: flex; flex-direction: column; min-height: 100vh; }
       main { flex: 1; }
     `,

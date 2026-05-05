@@ -1,14 +1,14 @@
 <div class="page">
   <header class="page-head">
     <div>
-      <h1>Dashboard</h1>
-      <p>Şirket organizasyon ağacı (yukarıdan aşağı)</p>
+      <h1>{{ 'dashboard.title' | t }}</h1>
+      <p>{{ 'dashboard.subtitle' | t }}</p>
     </div>
     <div class="stats">
-      <div class="stat"><span class="num">{{ stats().total }}</span> aktif kullanıcı</div>
-      <div class="stat"><span class="num">{{ stats().managers }}</span> yönetici</div>
-      <div class="stat"><span class="num">{{ stats().techLeads }}</span> tech lead</div>
-      <div class="stat"><span class="num">{{ stats().workers }}</span> çalışan</div>
+      <div class="stat"><span class="num">{{ stats().total }}</span> {{ 'dashboard.stat_total' | t }}</div>
+      <div class="stat"><span class="num">{{ stats().managers }}</span> {{ 'dashboard.stat_managers' | t }}</div>
+      <div class="stat"><span class="num">{{ stats().techLeads }}</span> {{ 'dashboard.stat_techleads' | t }}</div>
+      <div class="stat"><span class="num">{{ stats().workers }}</span> {{ 'dashboard.stat_workers' | t }}</div>
     </div>
   </header>
 
@@ -16,9 +16,9 @@
     <!-- Org tree -->
     <section class="tree-card">
       @if (loading()) {
-        <div class="state">Yükleniyor...</div>
+        <div class="state">{{ 'common.loading' | t }}</div>
       } @else if (roots().length === 0) {
-        <div class="state">Henüz kullanıcı yok</div>
+        <div class="state">{{ 'dashboard.empty' | t }}</div>
       } @else {
         <div class="tree-scroll">
           <div class="tree" [class.has-multiple-roots]="roots().length > 1">
@@ -35,11 +35,11 @@
       <div class="side-card">
         <div class="side-head">
           <span class="dot" style="background: var(--c-amber);"></span>
-          HR
+          {{ 'dashboard.panel_hr' | t }}
           <span class="count">{{ hrUsers().length }}</span>
         </div>
         @if (hrUsers().length === 0) {
-          <div class="side-empty">Henüz HR yok</div>
+          <div class="side-empty">{{ 'dashboard.empty_hr' | t }}</div>
         } @else {
           <div class="side-list">
             @for (u of hrUsers(); track u.id) {
@@ -57,11 +57,11 @@
       <div class="side-card">
         <div class="side-head">
           <span class="dot" style="background: var(--c-pink);"></span>
-          QA Takımı
+          {{ 'dashboard.panel_qa' | t }}
           <span class="count">{{ qaUsers().length }}</span>
         </div>
         @if (qaUsers().length === 0) {
-          <div class="side-empty">Henüz QA çalışanı yok</div>
+          <div class="side-empty">{{ 'dashboard.empty_qa' | t }}</div>
         } @else {
           <div class="side-list">
             @for (u of qaUsers(); track u.id) {
@@ -70,7 +70,7 @@
                   <div class="side-name">
                     {{ u.name }}
                     @if (u.roleCode === 'QA_SPECIALIST') {
-                      <span class="role-tag tag-pink">QA-LEAD</span>
+                      <span class="role-tag tag-pink">{{ 'dashboard.tag_qa_lead' | t }}</span>
                     }
                   </div>
                   <div class="side-meta">{{ u.position || u.email }}</div>
@@ -109,7 +109,7 @@
       @if (rosterReports(node).length > 0) {
         <div class="roster" [style.--accent]="roleColor(node.user.roleCode)">
           <div class="roster-head">
-            <span class="roster-label">Takım</span>
+            <span class="roster-label">{{ 'dashboard.panel_team' | t }}</span>
             <span class="roster-count">{{ rosterReports(node).length }}</span>
           </div>
           <ul class="roster-list">
@@ -117,7 +117,7 @@
               <li class="roster-item" [class.is-tl]="m.user.roleCode === 'TECH_LEAD'">
                 <span class="roster-name" [title]="m.user.position || ''">{{ m.user.name }}</span>
                 @if (m.user.roleCode === 'TECH_LEAD') {
-                  <span class="role-tag tag-teal">TL</span>
+                  <span class="role-tag tag-teal">{{ 'dashboard.tag_tl' | t }}</span>
                 }
               </li>
             }
