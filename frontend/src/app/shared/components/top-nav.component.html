@@ -1,62 +1,84 @@
 @if (currentUser(); as user) {
-  <div class="topnav">
-    <div class="left">
-      <div class="brand">
-        <div class="brand-logo">W</div>
-        <span class="brand-name">Workload</span>
-      </div>
-      <nav class="menu">
-        @for (item of menu(); track item.key) {
-          <a
-            class="menu-item"
-            [routerLink]="item.path"
-            routerLinkActive="active"
-          >
-            <lucide-icon [img]="item.icon" size="13"></lucide-icon>
-            {{ item.labelKey | t }}
-          </a>
-        }
-      </nav>
-    </div>
+  <aside class="sidebar" [class.collapsed]="collapsed()">
 
-    <div class="right">
+    <!-- ============== Header: brand + collapse toggle ============== -->
+    <div class="sidebar-head">
+      <div class="brand">
+        @if (!collapsed()) {
+             <div>
+          <div class="brand-name">DIGITAL SADC</div>
+        </div>
+        }
+      </div>
       <button
         type="button"
-        class="lang-switch"
-        [attr.aria-label]="'language.switch_aria' | t"
-        [title]="'language.switch_aria' | t"
-        (click)="toggleLocale()"
+        class="collapse-btn"
+        [title]="(collapsed() ? 'nav.expand' : 'nav.collapse') | t"
+        [attr.aria-label]="(collapsed() ? 'nav.expand' : 'nav.collapse') | t"
+        (click)="toggleCollapsed()"
       >
-        {{ localeService.locale() === 'tr' ? 'EN' : 'TR' }}
+        <lucide-icon [img]="collapsed() ? chevronRightIcon : chevronLeftIcon" size="16"></lucide-icon>
       </button>
-
-      <div class="role-chip">{{ roleLabel() }}</div>
-
-      <button type="button" class="profile-btn" (click)="toggleProfile()">
-        <span class="avatar">{{ initials() }}</span>
-        <span class="first-name">{{ firstName() }}</span>
-      </button>
-
-      @if (profileOpen()) {
-        <div class="profile-overlay" (click)="closeProfile()"></div>
-        <div class="profile-popover">
-          <div class="profile-head">
-            <div class="profile-name">{{ user.name }}</div>
-            <div class="profile-email">{{ user.email }}</div>
-            <div class="profile-tags">
-              <span class="tag tag-teal">{{ roleLabel() }}</span>
-            </div>
-            @if (user.position) {
-              <div class="profile-position">{{ user.position }}</div>
-            }
-            <div class="profile-id">{{ 'nav.id' | t }}: {{ user.accountId }}</div>
-          </div>
-          <button type="button" class="logout-btn" (click)="logout()">
-            <lucide-icon [img]="logOutIcon" size="13"></lucide-icon>
-            {{ 'nav.logout' | t }}
-          </button>
-        </div>
-      }
     </div>
-  </div>
+
+    <!-- ============== Menu ============== -->
+    <nav class="menu">
+      @for (item of menu(); track item.key) {
+        @switch (item.type) {
+
+          @case ('leaf') {
+            <a
+              class="menu-item"
+              [routerLink]="asLeaf(item).path"
+              routerLinkActive="active"
+              [title]="collapsed() ? (asLeaf(item).labelKey | t) : null"
+            >
+              <lucide-icon [img]="asLeaf(item).icon" size="18"></lucide-icon>
+              @if (!collapsed()) {
+                <span class="label">{{ asLeaf(item).labelKey | t }}</span>
+              }
+            </a>
+          }
+
+          @case ('group') {
+            <div class="menu-group">
+              <button
+                type="button"
+                class="menu-group-head"
+                [title]="collapsed() ? (asGroup(item).labelKey | t) : null"
+                (click)="toggleGroup(asGroup(item).key)"
+              >
+                <lucide-icon [img]="asGroup(item).icon" size="18"></lucide-icon>
+                @if (!collapsed()) {
+                  <span class="label">{{ asGroup(item).labelKey | t }}</span>
+                  <lucide-icon
+                    [img]="chevronDownIcon"
+                    size="13"
+                    class="caret"
+                    [class.expanded]="isGroupExpanded(asGroup(item).key)"
+                  ></lucide-icon>
+                }
+              </button>
+
+              @if (!collapsed() && isGroupExpanded(asGroup(item).key)) {
+                <div class="menu-group-children">
+                  @for (child of asGroup(item).children; track child.key) {
+                    <a
+                      class="menu-item nested"
+                      [routerLink]="child.path"
+                      routerLinkActive="active"
+                    >
+                      <lucide-icon [img]="child.icon" size="16"></lucide-icon>
+                      <span class="label">{{ child.labelKey | t }}</span>
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+    </nav>
+
+  </aside>
 }

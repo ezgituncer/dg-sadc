@@ -102,13 +102,16 @@
         <option value="medium">{{ 'workload_entry.complexity_medium' | t }}</option>
         <option value="high">{{ 'workload_entry.complexity_high' | t }}</option>
       </select>
-      <input
-        type="text"
-        class="dropdown account-input"
-        [placeholder]="'workload_list.account_id_placeholder' | t"
+      <select
+        class="dropdown user-dropdown"
         [ngModel]="accountIdFilter()"
-        (ngModelChange)="accountIdFilter.set(($event || '').toUpperCase()); page.set(1)"
-      />
+        (ngModelChange)="accountIdFilter.set($event || ''); page.set(1)"
+      >
+        <option value="">{{ 'workload_list.user_all' | t }}</option>
+        @for (u of directoryUsers(); track u.accountId) {
+          <option [value]="u.accountId">{{ u.name }} ({{ u.accountId }})</option>
+        }
+      </select>
     </div>
   </section>
 

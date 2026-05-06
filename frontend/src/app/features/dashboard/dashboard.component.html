@@ -4,15 +4,26 @@
       <h1>{{ 'dashboard.title' | t }}</h1>
       <p>{{ 'dashboard.subtitle' | t }}</p>
     </div>
-    <div class="stats">
-      <div class="stat"><span class="num">{{ stats().total }}</span> {{ 'dashboard.stat_total' | t }}</div>
-      <div class="stat"><span class="num">{{ stats().managers }}</span> {{ 'dashboard.stat_managers' | t }}</div>
-      <div class="stat"><span class="num">{{ stats().techLeads }}</span> {{ 'dashboard.stat_techleads' | t }}</div>
-      <div class="stat"><span class="num">{{ stats().workers }}</span> {{ 'dashboard.stat_workers' | t }}</div>
+    <div class="head-right">
+      <div class="stats">
+        <div class="stat"><span class="num">{{ stats().total }}</span> {{ 'dashboard.stat_total' | t }}</div>
+        <div class="stat"><span class="num">{{ stats().managers }}</span> {{ 'dashboard.stat_managers' | t }}</div>
+        <div class="stat"><span class="num">{{ stats().techLeads }}</span> {{ 'dashboard.stat_techleads' | t }}</div>
+        <div class="stat"><span class="num">{{ stats().workers }}</span> {{ 'dashboard.stat_workers' | t }}</div>
+      </div>
+      <button
+        type="button"
+        class="btn-export"
+        [disabled]="exporting() || roots().length === 0"
+        (click)="exportPng()"
+      >
+        <lucide-icon [img]="saveIcon" size="13"></lucide-icon>
+        {{ (exporting() ? 'dashboard.exporting' : 'dashboard.export_btn') | t }}
+      </button>
     </div>
   </header>
 
-  <div class="layout">
+  <div class="layout" #exportTarget>
     <!-- Org tree -->
     <section class="tree-card">
       @if (loading()) {
@@ -31,7 +42,9 @@
     </section>
 
     <!-- Aside: HR + QA team -->
-    <aside class="side">
+    <div class="side-section">
+    <div class="side-section-title">{{ 'dashboard.outside_tree_label' | t }}</div>
+    <section class="side">
       <div class="side-card">
         <div class="side-head">
           <span class="dot" style="background: var(--c-amber);"></span>
@@ -80,8 +93,13 @@
           </div>
         }
       </div>
-    </aside>
+    </section>
+    </div>
   </div>
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
 </div>
 
 <!-- Recursive top-down org-node template -->

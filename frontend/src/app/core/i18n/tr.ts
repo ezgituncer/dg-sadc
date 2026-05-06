@@ -72,13 +72,17 @@ export const TR_DICTIONARY = {
 
   nav: {
     dashboard: 'Dashboard',
+    workload_group: 'Workload',
     workload_entry: 'Workload girişi',
     workload_list: 'Listeler',
     yearly_report: 'Yıllık Rapor',
+    management_group: 'Yönetim',
     users: 'Kullanıcılar',
-    lookups: 'Yönetim',
+    lookups: 'Lookup Tabloları',
     logout: 'Çıkış yap',
     id: 'ID',
+    collapse: 'Kenar çubuğunu daralt',
+    expand: 'Kenar çubuğunu genişlet',
   },
 
   login: {
@@ -119,6 +123,11 @@ export const TR_DICTIONARY = {
     panel_team: 'Takım',
     panel_hr: 'HR',
     panel_qa: 'QA Takımı',
+    outside_tree_label: 'Organizasyon ağacının dışındakiler',
+    export_btn: 'Dışa aktar',
+    exporting: 'Hazırlanıyor...',
+    export_done: 'Organizasyon görseli indirildi',
+    export_failed: 'Dışa aktarma başarısız',
     tag_tl: 'TL',
     tag_qa_lead: 'QA-LEAD',
   },
@@ -189,6 +198,7 @@ export const TR_DICTIONARY = {
     status_all: 'Status (tümü)',
     complexity_all: 'Complexity (tümü)',
     account_id_placeholder: 'Account ID (örn. EMP001)',
+    user_all: 'Tüm kullanıcılar',
     kpi_total_records: 'Toplam kayıt',
     kpi_total_hours: 'Toplam saat',
     kpi_active_projects: 'Aktif proje',

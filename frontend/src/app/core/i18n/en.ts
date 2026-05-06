@@ -63,13 +63,17 @@ export const EN_DICTIONARY = {
 
   nav: {
     dashboard: 'Dashboard',
+    workload_group: 'Workload',
     workload_entry: 'Workload entry',
     workload_list: 'Listings',
     yearly_report: 'Yearly Report',
+    management_group: 'Management',
     users: 'Users',
-    lookups: 'Management',
+    lookups: 'Lookup tables',
     logout: 'Sign out',
     id: 'ID',
+    collapse: 'Collapse sidebar',
+    expand: 'Expand sidebar',
   },
 
   login: {
@@ -110,6 +114,11 @@ export const EN_DICTIONARY = {
     panel_team: 'Team',
     panel_hr: 'HR',
     panel_qa: 'QA Team',
+    outside_tree_label: 'Outside the org tree',
+    export_btn: 'Export',
+    exporting: 'Preparing...',
+    export_done: 'Org chart image downloaded',
+    export_failed: 'Export failed',
     tag_tl: 'TL',
     tag_qa_lead: 'QA-LEAD',
   },
@@ -180,6 +189,7 @@ export const EN_DICTIONARY = {
     status_all: 'Status (all)',
     complexity_all: 'Complexity (all)',
     account_id_placeholder: 'Account ID (e.g. EMP001)',
+    user_all: 'All users',
     kpi_total_records: 'Total entries',
     kpi_total_hours: 'Total hours',
     kpi_active_projects: 'Active projects',

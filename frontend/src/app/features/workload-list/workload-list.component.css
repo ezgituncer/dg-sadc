@@ -64,6 +64,7 @@
 .date-input { color-scheme: dark; }
 .dropdown option { background: var(--c-surface); }
 .account-input { width: 200px; text-transform: uppercase; }
+.user-dropdown { min-width: 220px; }
 
 .presets { display: flex; gap: 4px; margin-left: 4px; }
 .preset-btn {

@@ -17,6 +17,8 @@ import {
   KeyRound,
   Power,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -84,7 +86,7 @@ export class UsersComponent {
   protected readonly teams = inject(TeamsService);
   private readonly localeSvc = inject(LocaleService);
 
-  readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X };
+  readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight };
 
   readonly currentUser = this.auth.currentUser;
   readonly isAdmin = computed(() => this.auth.hasRole('ADMIN'));
@@ -99,6 +101,23 @@ export class UsersComponent {
   readonly items = signal<UserListItem[]>([]);
   readonly loading = signal(false);
   readonly selectedId = signal<number | null>(null);
+
+  // --- Pagination (client-side; backend returns the full filtered list) ---
+  readonly pageSizeOptions = [10, 20, 50, 100] as const;
+  readonly pageSize = signal<number>(20);
+  readonly page = signal<number>(1);
+
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.items().length / this.pageSize())),
+  );
+
+  readonly pagedItems = computed(() => {
+    const all = this.items();
+    const ps = this.pageSize();
+    const p = Math.min(this.page(), Math.max(1, Math.ceil(all.length / ps)));
+    const start = (p - 1) * ps;
+    return all.slice(start, start + ps);
+  });
 
   // --- form state ---
   readonly creating = signal(false);
@@ -144,6 +163,34 @@ export class UsersComponent {
       };
       this.fetch(filters);
     });
+
+    // Reset to page 1 whenever the data set or page size changes.
+    effect(() => {
+      this.roleFilter();
+      this.teamFilter();
+      this.statusFilter();
+      this.search();
+      this.pageSize();
+      this.page.set(1);
+    });
+  }
+
+  // --- Pagination handlers ---
+  setPage(p: number): void {
+    this.page.set(Math.max(1, Math.min(p, this.totalPages())));
+  }
+  setPageSize(size: number): void {
+    this.pageSize.set(size);
+  }
+  paginationWindow(): number[] {
+    const total = this.totalPages();
+    const current = this.page();
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, start + 4);
+    const realStart = Math.max(1, end - 4);
+    const out: number[] = [];
+    for (let i = realStart; i <= end; i++) out.push(i);
+    return out;
   }
 
   private fetch(filters: UserFilters): void {

@@ -22,6 +22,8 @@ import {
   AlertCircle,
   Users as UsersIcon,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -63,7 +65,7 @@ export class YearlyReportComponent {
   private readonly reportApi = inject(ReportService);
   private readonly localeSvc = inject(LocaleService);
 
-  readonly icons = { Calendar, Search, Save, Edit2, Plus, X, AlertCircle, UsersIcon, Check };
+  readonly icons = { Calendar, Search, Save, Edit2, Plus, X, AlertCircle, UsersIcon, Check, ChevronLeft, ChevronRight };
   readonly trMonths = TR_MONTHS_SHORT;
   readonly trMonthsFull = TR_MONTHS_FULL;
 
@@ -82,6 +84,11 @@ export class YearlyReportComponent {
 
   // User multi-select: empty Set means "all users"; otherwise show only these accountIds.
   readonly selectedAccountIds = signal<Set<string>>(new Set());
+
+  // --- Pagination (table only — KPIs and CSV always use the full visible set) ---
+  readonly pageSizeOptions = [10, 20, 50, 100] as const;
+  readonly pageSize = signal<number>(20);
+  readonly page = signal<number>(1);
 
   // Dropdown UI state for the user picker
   readonly userPickerOpen = signal(false);
@@ -111,12 +118,29 @@ export class YearlyReportComponent {
     return r ? parseFloat(r.yearTargetHours) : 0;
   });
 
-  /** Rows shown in the matrix — filtered by the user multi-select if any are picked. */
+  /** Rows shown in the matrix — filtered by the user multi-select if any are picked.
+   *  KPIs / CSV / column totals all read this so they reflect the full filtered set,
+   *  not just the current page. */
   readonly visibleRows = computed(() => {
     const all = this.report()?.rows ?? [];
     const sel = this.selectedAccountIds();
     if (sel.size === 0) return all;
     return all.filter((r) => sel.has(r.user.accountId));
+  });
+
+  /** Pagination: how many pages the visible rows span. */
+  readonly totalPages = computed(() => {
+    const total = this.visibleRows().length;
+    return Math.max(1, Math.ceil(total / this.pageSize()));
+  });
+
+  /** Slice of visibleRows for the current page — what the matrix tbody actually renders. */
+  readonly pagedRows = computed(() => {
+    const rows = this.visibleRows();
+    const ps = this.pageSize();
+    const p = Math.min(this.page(), Math.max(1, Math.ceil(rows.length / ps)));
+    const start = (p - 1) * ps;
+    return rows.slice(start, start + ps);
   });
 
   readonly userCount = computed(() => this.visibleRows().length);
@@ -178,6 +202,17 @@ export class YearlyReportComponent {
       };
       this.fetchReport(filters);
     });
+
+    // Reset to page 1 whenever the underlying data set changes (filters or page size).
+    effect(() => {
+      // Track the inputs that affect total page count.
+      this.year();
+      this.teamFilter();
+      this.projectFilter();
+      this.selectedAccountIds();
+      this.pageSize();
+      this.page.set(1);
+    });
   }
 
   private fetchReport(filters: any): void {
@@ -227,6 +262,26 @@ export class YearlyReportComponent {
   allExpanded(): boolean {
     const rows = this.visibleRows();
     return rows.length > 0 && this.expandedRows().size === rows.length;
+  }
+
+  // --- Pagination ---
+  setPage(p: number): void {
+    this.page.set(Math.max(1, Math.min(p, this.totalPages())));
+  }
+  setPageSize(size: number): void {
+    this.pageSize.set(size);
+    // page is auto-reset by the effect tracking pageSize().
+  }
+  /** Sliding window of up to 5 page numbers around the current page (for the pager UI). */
+  paginationWindow(): number[] {
+    const total = this.totalPages();
+    const current = this.page();
+    const start = Math.max(1, current - 2);
+    const end = Math.min(total, start + 4);
+    const realStart = Math.max(1, end - 4);
+    const out: number[] = [];
+    for (let i = realStart; i <= end; i++) out.push(i);
+    return out;
   }
 
   // --- User multi-select picker ---

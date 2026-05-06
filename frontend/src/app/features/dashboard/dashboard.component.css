@@ -8,6 +8,9 @@
 .page-head h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; color: var(--c-text-primary); }
 .page-head p  { font-size: 13px; color: var(--c-text-secondary); margin: 0; }
 
+.head-right {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
 .stats { display: flex; gap: 14px; flex-wrap: wrap; }
 .stat {
   font-size: 12px; color: var(--c-text-muted);
@@ -16,8 +19,17 @@
 }
 .stat .num { color: var(--c-teal); font-weight: 600; font-size: 14px; margin-right: 4px; }
 
-.layout { display: grid; grid-template-columns: 1fr 320px; gap: 14px; }
-@media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+.btn-export {
+  padding: 8px 14px; background: var(--c-teal);
+  border: none; border-radius: 6px;
+  color: var(--c-bg); font-size: 12px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+.btn-export:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-export:hover:not(:disabled) { opacity: 0.9; }
+
+.layout { display: flex; flex-direction: column; gap: 14px; }
 
 /* --- Tree container --- */
 .tree-card {
@@ -27,7 +39,7 @@
 }
 .tree-scroll {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: auto;            /* horizontal scroll for very wide trees */
   padding-bottom: 6px;
 }
 .tree {
@@ -61,7 +73,7 @@
 /* --- Block: card on top, optional worker roster panel below --- */
 .org-block {
   display: flex; flex-direction: column;
-  width: 240px;
+  width: 200px;            /* slimmer to fit more siblings per row before wrap kicks in */
   position: relative;
   z-index: 1;
 }
@@ -102,7 +114,7 @@
 /* --- Worker roster (compact list under the card) --- */
 .roster {
   --accent: var(--c-blue);
-  background: var(--c-surface);
+  background: var(--c-bg);
   border: 1px solid var(--c-border-hover);
   border-radius: 0 0 8px 8px;
   padding: 8px 12px 10px;
@@ -225,8 +237,23 @@
   display: none;
 }
 
-/* --- Aside (HR + QA) --- */
-.side { display: flex; flex-direction: column; gap: 14px; }
+/* --- Outside-tree section: header + 2-column grid below the org tree --- */
+.side-section {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-top: 6px;
+}
+.side-section-title {
+  font-size: 11px; font-weight: 500;
+  color: var(--c-text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding-left: 4px;
+}
+.side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 760px) { .side { grid-template-columns: 1fr; } }
 .side-card {
   background: var(--c-surface); border: 1px solid var(--c-border);
   border-radius: 10px; padding: 14px;

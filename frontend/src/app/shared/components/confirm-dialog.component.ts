@@ -28,7 +28,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       .overlay { position: absolute; inset: 0; background: rgba(8, 16, 32, 0.65); backdrop-filter: blur(2px); }
       .dialog {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: var(--c-surface); border: 1px solid var(--c-border-hover);
+        background: var(--c-bg); border: 1px solid var(--c-border-hover);
         border-radius: 10px; padding: 20px; min-width: 360px; max-width: 440px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       }

@@ -1,0 +1,43 @@
+@if (currentUser(); as user) {
+  <header class="topbar">
+    <div class="topbar-spacer"></div>
+
+    <button
+      type="button"
+      class="lang-switch"
+      [attr.aria-label]="'language.switch_aria' | t"
+      [title]="'language.switch_aria' | t"
+      (click)="toggleLocale()"
+    >
+      {{ localeService.locale() === 'tr' ? 'EN' : 'TR' }}
+    </button>
+
+    <div class="role-chip">{{ roleLabel() }}</div>
+
+    <button type="button" class="profile-btn" (click)="toggleProfile()">
+      <span class="avatar">{{ initials() }}</span>
+      <span class="first-name">{{ firstName() }}</span>
+    </button>
+
+    @if (profileOpen()) {
+      <div class="profile-overlay" (click)="closeProfile()"></div>
+      <div class="profile-popover">
+        <div class="profile-head">
+          <div class="profile-name">{{ user.name }}</div>
+          <div class="profile-email">{{ user.email }}</div>
+          <div class="profile-tags">
+            <span class="tag tag-teal">{{ roleLabel() }}</span>
+          </div>
+          @if (user.position) {
+            <div class="profile-position">{{ user.position }}</div>
+          }
+          <div class="profile-id">{{ 'nav.id' | t }}: {{ user.accountId }}</div>
+        </div>
+        <button type="button" class="logout-btn" (click)="logout()">
+          <lucide-icon [img]="logOutIcon" size="14"></lucide-icon>
+          {{ 'nav.logout' | t }}
+        </button>
+      </div>
+    }
+  </header>
+}

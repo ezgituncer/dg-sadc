@@ -280,6 +280,36 @@ td.total-cell {
   padding: 60px 20px; text-align: center; color: var(--c-text-muted); font-size: 13px;
 }
 
+/* --- Pagination (under the table) --- */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--c-border);
+}
+.page-size, .page-controls {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--c-text-muted);
+}
+.size-btn {
+  padding: 4px 10px; background: transparent;
+  border: 1px solid var(--c-border); border-radius: 4px;
+  color: var(--c-text-muted); font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.size-btn.active { background: var(--c-teal); color: var(--c-bg); border-color: var(--c-teal); }
+.page-btn {
+  padding: 4px 9px; background: transparent;
+  border: 1px solid var(--c-border); border-radius: 4px;
+  color: var(--c-text-secondary); font-size: 11px; cursor: pointer; font-family: inherit;
+  display: inline-flex; align-items: center;
+}
+.page-btn.active { background: var(--c-teal); color: var(--c-bg); border-color: var(--c-teal); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-info { margin-left: 8px; font-size: 11px; color: var(--c-text-muted); }
+
 tfoot { border-top: 2px solid var(--c-border-hover); background: var(--c-surface-deep); }
 tfoot td { padding: 10px 6px; font-size: 12px; color: var(--c-text-primary); font-weight: 500; }
 tfoot td.foot-label { padding: 12px 14px; text-align: left; border-right: 1px solid var(--c-border); }

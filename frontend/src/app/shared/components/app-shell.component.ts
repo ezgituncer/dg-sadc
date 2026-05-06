@@ -3,19 +3,23 @@ import { RouterOutlet } from '@angular/router';
 
 import { LookupService } from '../../core/services/lookup.service';
 import { UsersService } from '../../core/services/users.service';
+import { AppHeaderComponent } from './app-header.component';
 import { TopNavComponent } from './top-nav.component';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, TopNavComponent],
+  imports: [RouterOutlet, TopNavComponent, AppHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="shell">
       <app-top-nav />
-      <main>
-        <router-outlet />
-      </main>
+      <div class="main-area">
+        <app-header />
+        <main>
+          <router-outlet />
+        </main>
+      </div>
     </div>
   `,
   styles: [
@@ -24,12 +28,26 @@ import { TopNavComponent } from './top-nav.component';
         display: block;
         min-height: 100vh;
         color: var(--c-text-primary);
-        /* User-supplied /assets/images/app-bg.png — shown as-is, fixed on scroll.
-         * The html element carries the solid base color as a backstop if the image is missing. */
+        /* User-supplied /assets/images/app-bg.png — shown as-is, fixed on scroll. */
         background: url('/assets/images/app-bg.png') center/cover no-repeat fixed;
       }
-      .shell { display: flex; flex-direction: column; min-height: 100vh; }
-      main { flex: 1; }
+      /* Two-column shell: sidebar (auto width) on the left, main area fills the rest.
+       * The header lives at the top of the main area and is sticky there. */
+      .shell {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        min-height: 100vh;
+      }
+      .main-area {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 100vh;
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+      }
     `,
   ],
 })
@@ -43,8 +61,6 @@ export class AppShellComponent implements OnInit {
         console.error('Failed to load lookup data', err);
       });
     }
-    // Preload the user directory so the listings table can show names instead
-    // of account IDs without a per-row lookup.
     this.users.loadDirectory().catch((err) => {
       console.error('Failed to load user directory', err);
     });

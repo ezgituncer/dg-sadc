@@ -1,104 +1,172 @@
 :host { display: block; }
 
-.topnav {
-  background: linear-gradient(180deg, #0F1F3A 0%, #0A1628 100%);
-  padding: 14px 24px;
-  border-bottom: 1px solid rgba(45, 212, 191, 0.15);
+/* ============== Sidebar layout ============== */
+.sidebar {
+  --sidebar-w-expanded: 248px;
+  --sidebar-w-collapsed: 72px;
+
+  width: var(--sidebar-w-expanded);
+  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  background: rgb(1 13 23 / 31%);     /* transparent — page bg shows through */
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-right: 1px solid var(--c-border);
+  transition: width 0.22s ease;
+  overflow: hidden;
 }
+.sidebar.collapsed { width: var(--sidebar-w-collapsed); }
 
-.left { display: flex; align-items: center; gap: 32px; }
-.brand { display: flex; align-items: center; gap: 10px; }
+/* ============== Head: brand + collapse btn ============== */
+.sidebar-head {
+  padding: 18px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px;
+}
+.brand-name { display: flex; align-items: center; gap: 12px; min-width: 0;margin:'30px'; }
 .brand-logo {
-  width: 28px; height: 28px; border-radius: 6px; background: var(--c-teal);
+  width: 36px; height: 36px; border-radius: 9px; background: var(--c-teal);
   display: flex; align-items: center; justify-content: center;
-  color: var(--c-bg); font-weight: 700; font-size: 14px;
+  color: var(--c-bg); font-weight: 700; font-size: 17px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(45, 212, 191, 0.30);
 }
-.brand-name { font-size: 15px; font-weight: 500; }
-
-.menu { display: flex; gap: 2px; font-size: 13px; }
-.menu-item {
-  padding: 6px 12px; border-radius: 6px;
-  color: var(--c-text-secondary);
-  text-decoration: none;
-  display: flex; align-items: center; gap: 6px;
-  font-family: inherit;
-  background: transparent;
-  transition: background 0.15s, color 0.15s;
-}
-.menu-item:hover { background: var(--c-surface-hover); }
-.menu-item.active {
-  background: rgba(45, 212, 191, 0.12);
-  color: var(--c-teal);
+.brand-name {
+  font-size: 17px; font-weight: 600; color: var(--c-text-primary);
+  letter-spacing: -0.01em;
 }
 
-.right { display: flex; align-items: center; gap: 10px; position: relative; }
-
-.role-chip {
-  font-size: 11px; color: var(--c-text-muted);
-  padding: 4px 10px; border: 1px solid var(--c-border); border-radius: 6px;
-}
-
-.lang-switch {
-  font-size: 11px; font-weight: 600;
-  padding: 4px 10px;
+.collapse-btn {
+  width: 30px; height: 30px;
   background: transparent;
   border: 1px solid var(--c-border);
-  border-radius: 6px;
-  color: var(--c-text-secondary);
-  cursor: pointer; font-family: inherit;
-  letter-spacing: 0.5px;
-  transition: color 0.15s, border-color 0.15s;
+  border-radius: 7px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.lang-switch:hover {
+.collapse-btn:hover {
   color: var(--c-teal);
   border-color: var(--c-border-hover);
+  background: rgba(45, 212, 191, 0.06);
+}
+.sidebar.collapsed .sidebar-head { justify-content: center; padding: 18px 0; }
+.sidebar.collapsed .brand { justify-content: center; }
+.sidebar.collapsed .collapse-btn { display: none; }
+.sidebar.collapsed .sidebar-head::after {
+  /* Replace the inline collapse button with a tiny tab on the right edge for re-expand */
+  content: '';
+  display: none;
 }
 
-.profile-btn {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 8px 4px 4px;
+/* ============== Menu ============== */
+.menu {
+  flex: 1;
+  padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 6px;       /* more breathing room between rows */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.menu::-webkit-scrollbar { width: 4px; }
+.menu::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.18); border-radius: 4px; }
+
+.menu-item, .menu-group-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;                                    /* rounder pill */
   background: transparent;
-  border: 1px solid var(--c-border); border-radius: 20px;
-  cursor: pointer; color: var(--c-text-primary); font-family: inherit;
+  border: none;
+  color: var(--c-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease;
+  width: 100%;
+  text-align: left;
+  letter-spacing: -0.005em;
 }
-.avatar {
-  width: 28px; height: 28px; border-radius: 50%; background: #1E40AF;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600; color: #BFDBFE;
+.menu-item lucide-icon, .menu-group-head lucide-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+  transition: opacity 0.12s ease, color 0.12s ease;
 }
-.first-name { font-size: 12px; }
+.menu-item:hover, .menu-group-head:hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--c-text-primary);
+}
+.menu-item:hover lucide-icon, .menu-group-head:hover lucide-icon { opacity: 1; }
 
-.profile-overlay {
-  position: fixed; inset: 0; z-index: 40; background: transparent;
+/* --- Active state: solid filled pill (matches the design reference) --- */
+.menu-item.active {
+  background: var(--c-teal);
+  color: var(--c-bg);
+  font-weight: 600;
+}
+.menu-item.active lucide-icon {
+  opacity: 1;
+  color: var(--c-bg);
 }
 
-.profile-popover {
-  position: absolute; top: calc(100% + 8px); right: 0;
-  background: var(--c-surface);
-  backdrop-filter: blur(30px);
-  border: 1px solid var(--c-border-hover); border-radius: 8px;
-  min-width: 240px; z-index: 50; overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+.menu-item .label, .menu-group-head .label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.profile-head { padding: 14px 16px; border-bottom: 1px solid var(--c-border); }
-.profile-name { font-size: 13px; font-weight: 500; color: var(--c-text-primary); }
-.profile-email { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
-.profile-tags { display: flex; gap: 6px; margin-top: 8px; }
-.tag {
-  font-size: 10px; padding: 2px 8px; border-radius: 3px;
-}
-.tag-teal { background: rgba(45, 212, 191, 0.10); color: var(--c-teal); }
-.profile-position { font-size: 11px; color: var(--c-text-muted); margin-top: 8px; }
-.profile-id { font-size: 10px; color: var(--c-text-muted); margin-top: 4px; font-family: monospace; }
 
-.logout-btn {
-  width: 100%; padding: 10px 16px; background: transparent; border: none;
-  cursor: pointer; color: var(--c-red); font-size: 12px;
-  display: flex; align-items: center; gap: 8px;
-  font-family: inherit; text-align: left;
-  transition: background 0.15s;
+.menu-group { display: flex; flex-direction: column; }
+.menu-group-head .caret {
+  margin-left: auto;
+  color: var(--c-text-muted);
+  transition: transform 0.2s ease;
+  opacity: 0.7;
 }
-.logout-btn:hover { background: rgba(239, 68, 68, 0.10); }
+.menu-group-head .caret.expanded { transform: rotate(180deg); }
+
+/* Nested children inherit the same style language */
+.menu-group-children {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 8px;
+  padding-left: 18px;
+  margin-left: 24px;
+  border-left: 1px solid var(--c-border);
+}
+.menu-item.nested {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  gap: 12px;
+  color: var(--c-text-muted);
+  border-radius: 10px;
+}
+.menu-item.nested lucide-icon { opacity: 0.75; }
+.menu-item.nested:hover { color: var(--c-text-primary); }
+.menu-item.nested.active {
+  background: var(--c-teal);
+  color: var(--c-bg);
+  font-weight: 600;
+  box-shadow: 0 4px 14px -4px rgba(45, 212, 191, 0.40);
+}
+.menu-item.nested.active lucide-icon { color: var(--c-bg); opacity: 1; }
+
+/* Collapsed state — keep the same pill geometry, just centered */
+.sidebar.collapsed .menu { padding: 14px 10px; }
+.sidebar.collapsed .menu-item,
+.sidebar.collapsed .menu-group-head {
+  justify-content: center;
+  padding: 12px 10px;
+  width: 100%;
+}
+.sidebar.collapsed .menu-group-children { display: none; }

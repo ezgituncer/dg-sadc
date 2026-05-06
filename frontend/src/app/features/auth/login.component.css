@@ -60,8 +60,29 @@
   display: flex; align-items: center; justify-content: center;
   color: var(--c-bg); font-weight: 700; font-size: 22px;
 }
-.brand-name { font-size: 20px; font-weight: 600; }
-.brand-sub  { font-size: 12px; color: var(--c-text-muted); }
+.brand-name {
+  font-family: 'Bungee Tint', cursive;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  background: linear-gradient(87deg, rgb(59,76,95) 0%, #ffffff 50%, #63ff94 100%);
+  text-align: center;
+  margin: auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.brand-sub {
+  font-family: 'Bungee Tint', cursive;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(87deg, rgb(59,76,95) 0%, #ffffff 50%, #63ff94 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
 .brand-headline { font-size: 32px; font-weight: 500; line-height: 1.2; margin: 0 0 16px; }
 .brand-headline .accent { color: var(--c-teal); }
 .brand-blurb { font-size: 14px; color: var(--c-text-secondary); line-height: 1.6; margin: 0 0 32px; }

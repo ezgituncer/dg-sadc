@@ -65,7 +65,7 @@
           } @else if (items().length === 0) {
             <tr><td colspan="9" class="state">{{ 'common.no_users' | t }}</td></tr>
           } @else {
-            @for (u of items(); track u.id) {
+            @for (u of pagedItems(); track u.id) {
               <tr [class.inactive]="!u.isActive" (click)="selectUser(u)">
                 <td><span class="acc-id">{{ u.accountId }}</span></td>
                 <td>
@@ -115,6 +115,41 @@
         </tbody>
       </table>
     </div>
+
+    @if (items().length > 0) {
+      <div class="pagination">
+        <div class="page-size">
+          {{ 'workload_list.page_size_label' | t }}
+          @for (size of pageSizeOptions; track size) {
+            <button
+              type="button"
+              class="size-btn"
+              [class.active]="pageSize() === size"
+              (click)="setPageSize(size)"
+            >{{ size }}</button>
+          }
+        </div>
+        <div class="page-controls">
+          <button class="page-btn" type="button" [disabled]="page() === 1" (click)="setPage(page() - 1)">
+            <lucide-icon [img]="icons.ChevronLeft" size="13"></lucide-icon>
+          </button>
+          @for (p of paginationWindow(); track p) {
+            <button
+              class="page-btn"
+              type="button"
+              [class.active]="p === page()"
+              (click)="setPage(p)"
+            >{{ p }}</button>
+          }
+          <button class="page-btn" type="button" [disabled]="page() === totalPages()" (click)="setPage(page() + 1)">
+            <lucide-icon [img]="icons.ChevronRight" size="13"></lucide-icon>
+          </button>
+          <span class="page-info">
+            {{ 'workload_list.page_info' | t : { page: page(), total: totalPages(), count: items().length } }}
+          </span>
+        </div>
+      </div>
+    }
   </section>
 
   <!-- ============== Create / Edit dialog ============== -->

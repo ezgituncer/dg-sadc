@@ -113,6 +113,14 @@ export class WorkloadListComponent {
     return Math.max(1, Math.ceil(t / ps));
   });
 
+  /** Directory users sorted alphabetically — populates the user filter dropdown.
+   *  Reading the directory signal keeps this reactive; it picks up the first time
+   *  the service finishes its lazy fetch in AppShell.ngOnInit. */
+  readonly directoryUsers = computed(() => {
+    const map = this.users.directory();
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+  });
+
   // KPI cards driven by the aggregate endpoint (full filtered set, not just one page).
   readonly kpis = computed(() => {
     const agg = this.aggregates();
