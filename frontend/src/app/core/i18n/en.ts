@@ -307,6 +307,18 @@ export const EN_DICTIONARY = {
     toast_pwd_failed: 'Could not reset password',
     toast_deactivated: 'User deactivated',
     toast_reactivated: 'User reactivated',
+    btn_add_role: 'Add role',
+    btn_add_team: 'Add team',
+    add_role_title: 'New role',
+    add_team_title: 'New team',
+    field_role_name: 'Role name',
+    field_team_name: 'Team name',
+    placeholder_role_name: 'e.g. Designer',
+    placeholder_team_name: 'e.g. Mobile',
+    role_exists: 'A role with this name already exists',
+    team_exists: 'A team with this name already exists',
+    toast_role_created: 'Role added',
+    toast_team_created: 'Team added',
   },
 
   lookups: {

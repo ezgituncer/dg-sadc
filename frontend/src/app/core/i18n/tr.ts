@@ -317,6 +317,18 @@ export const TR_DICTIONARY = {
     toast_pwd_failed: 'Parola sıfırlanamadı',
     toast_deactivated: 'Kullanıcı pasif edildi',
     toast_reactivated: 'Kullanıcı yeniden aktif',
+    btn_add_role: 'Rol ekle',
+    btn_add_team: 'Takım ekle',
+    add_role_title: 'Yeni rol',
+    add_team_title: 'Yeni takım',
+    field_role_name: 'Rol adı',
+    field_team_name: 'Takım adı',
+    placeholder_role_name: 'Örn. Designer',
+    placeholder_team_name: 'Örn. Mobile',
+    role_exists: 'Bu isimde bir rol zaten var',
+    team_exists: 'Bu isimde bir takım zaten var',
+    toast_role_created: 'Rol eklendi',
+    toast_team_created: 'Takım eklendi',
   },
 
   lookups: {

@@ -19,6 +19,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -86,7 +87,7 @@ export class UsersComponent {
   protected readonly teams = inject(TeamsService);
   private readonly localeSvc = inject(LocaleService);
 
-  readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight };
+  readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight, Plus };
 
   readonly currentUser = this.auth.currentUser;
   readonly isAdmin = computed(() => this.auth.hasRole('ADMIN'));
@@ -128,6 +129,12 @@ export class UsersComponent {
   readonly toast = signal<{ message: string; kind: 'success' | 'error' } | null>(null);
   readonly confirmDeleteId = signal<number | null>(null);
   readonly resetPasswordTarget = signal<UserListItem | null>(null);
+
+  // --- Quick-add role / team dialogs ---
+  readonly addingRole = signal(false);
+  readonly newRoleName = signal('');
+  readonly addingTeam = signal(false);
+  readonly newTeamName = signal('');
 
   readonly selected = computed<UserListItem | null>(() => {
     const id = this.selectedId();
@@ -414,6 +421,56 @@ export class UsersComponent {
     if (!managerAccountId) return '—';
     const found = this.items().find((u) => u.accountId === managerAccountId);
     return found?.name ?? managerAccountId;
+  }
+
+  // --- Quick-add role ---
+  openAddRole(): void {
+    this.newRoleName.set('');
+    this.addingRole.set(true);
+  }
+  cancelAddRole(): void {
+    this.addingRole.set(false);
+  }
+  submitAddRole(): void {
+    const name = this.newRoleName().trim();
+    if (!name) {
+      this.flashToast(this.localeSvc.t('common.required'), 'error');
+      return;
+    }
+    if (this.roles.list().some((r) => r.name.toLowerCase() === name.toLowerCase())) {
+      this.flashToast(this.localeSvc.t('users.role_exists'), 'error');
+      return;
+    }
+    const created = this.roles.add(name);
+    this.addingRole.set(false);
+    this.newRoleName.set('');
+    this.roleFilter.set(created.id);
+    this.flashToast(this.localeSvc.t('users.toast_role_created'), 'success');
+  }
+
+  // --- Quick-add team ---
+  openAddTeam(): void {
+    this.newTeamName.set('');
+    this.addingTeam.set(true);
+  }
+  cancelAddTeam(): void {
+    this.addingTeam.set(false);
+  }
+  submitAddTeam(): void {
+    const name = this.newTeamName().trim();
+    if (!name) {
+      this.flashToast(this.localeSvc.t('common.required'), 'error');
+      return;
+    }
+    if (this.teams.list().some((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      this.flashToast(this.localeSvc.t('users.team_exists'), 'error');
+      return;
+    }
+    const created = this.teams.add(name);
+    this.addingTeam.set(false);
+    this.newTeamName.set('');
+    this.teamFilter.set(created.id);
+    this.flashToast(this.localeSvc.t('users.toast_team_created'), 'success');
   }
 
   formatDate(iso: string | null | undefined): string {

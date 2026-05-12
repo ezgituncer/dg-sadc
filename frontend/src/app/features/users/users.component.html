@@ -22,18 +22,40 @@
         (ngModelChange)="search.set($event)"
       />
     </div>
-    <select class="dropdown" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
-      <option [ngValue]="null">{{ 'users.role_all' | t }}</option>
-      @for (r of roles.list(); track r.id) {
-        <option [ngValue]="r.id">{{ r.name }}</option>
-      }
-    </select>
-    <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
-      <option [ngValue]="null">{{ 'users.team_all' | t }}</option>
-      @for (t of teams.list(); track t.id) {
-        <option [ngValue]="t.id">{{ t.name }}</option>
-      }
-    </select>
+    <div class="dropdown-group">
+      <select class="dropdown" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+        <option [ngValue]="null">{{ 'users.role_all' | t }}</option>
+        @for (r of roles.list(); track r.id) {
+          <option [ngValue]="r.id">{{ r.name }}</option>
+        }
+      </select>
+      <button
+        type="button"
+        class="add-pill"
+        (click)="openAddRole()"
+        [title]="'users.btn_add_role' | t"
+        [attr.aria-label]="'users.btn_add_role' | t"
+      >
+        <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+      </button>
+    </div>
+    <div class="dropdown-group">
+      <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
+        <option [ngValue]="null">{{ 'users.team_all' | t }}</option>
+        @for (t of teams.list(); track t.id) {
+          <option [ngValue]="t.id">{{ t.name }}</option>
+        }
+      </select>
+      <button
+        type="button"
+        class="add-pill"
+        (click)="openAddTeam()"
+        [title]="'users.btn_add_team' | t"
+        [attr.aria-label]="'users.btn_add_team' | t"
+      >
+        <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+      </button>
+    </div>
     <select class="dropdown" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
       <option value="active">{{ 'common.active' | t }}</option>
       <option value="inactive">{{ 'common.inactive' | t }}</option>
@@ -337,5 +359,73 @@
       (confirm)="applyPasswordReset($event)"
       (cancel)="cancelPasswordReset()"
     />
+  }
+
+  <!-- ============== Add role mini-dialog ============== -->
+  @if (addingRole()) {
+    <div class="modal-overlay" (click)="cancelAddRole()"></div>
+    <div class="mini-modal" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <div class="modal-title">{{ 'users.add_role_title' | t }}</div>
+        <button class="x" (click)="cancelAddRole()" [attr.aria-label]="'common.close' | t">
+          <lucide-icon [img]="icons.X" size="14"></lucide-icon>
+        </button>
+      </header>
+      <div class="modal-body">
+        <div class="field">
+          <label>{{ 'users.field_role_name' | t }} *</label>
+          <input
+            type="text"
+            class="input"
+            [ngModel]="newRoleName()"
+            (ngModelChange)="newRoleName.set($event)"
+            (keydown.enter)="submitAddRole()"
+            [placeholder]="'users.placeholder_role_name' | t"
+            autofocus
+          />
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="cancelAddRole()">{{ 'common.cancel' | t }}</button>
+        <button class="btn-primary" (click)="submitAddRole()">
+          <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+          {{ 'common.add' | t }}
+        </button>
+      </footer>
+    </div>
+  }
+
+  <!-- ============== Add team mini-dialog ============== -->
+  @if (addingTeam()) {
+    <div class="modal-overlay" (click)="cancelAddTeam()"></div>
+    <div class="mini-modal" (click)="$event.stopPropagation()">
+      <header class="modal-head">
+        <div class="modal-title">{{ 'users.add_team_title' | t }}</div>
+        <button class="x" (click)="cancelAddTeam()" [attr.aria-label]="'common.close' | t">
+          <lucide-icon [img]="icons.X" size="14"></lucide-icon>
+        </button>
+      </header>
+      <div class="modal-body">
+        <div class="field">
+          <label>{{ 'users.field_team_name' | t }} *</label>
+          <input
+            type="text"
+            class="input"
+            [ngModel]="newTeamName()"
+            (ngModelChange)="newTeamName.set($event)"
+            (keydown.enter)="submitAddTeam()"
+            [placeholder]="'users.placeholder_team_name' | t"
+            autofocus
+          />
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="cancelAddTeam()">{{ 'common.cancel' | t }}</button>
+        <button class="btn-primary" (click)="submitAddTeam()">
+          <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+          {{ 'common.add' | t }}
+        </button>
+      </footer>
+    </div>
   }
 </div>

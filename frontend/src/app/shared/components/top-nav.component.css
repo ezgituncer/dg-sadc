@@ -109,13 +109,13 @@
 
 /* --- Active state: solid filled pill (matches the design reference) --- */
 .menu-item.active {
-  background: var(--c-teal);
-  color: var(--c-bg);
+  background: #5be49e3b;
+  color: #5be49e;
   font-weight: 600;
 }
 .menu-item.active lucide-icon {
   opacity: 1;
-  color: var(--c-bg);
+  color: #5be49e;
 }
 
 .menu-item .label, .menu-group-head .label {
@@ -154,12 +154,11 @@
 .menu-item.nested lucide-icon { opacity: 0.75; }
 .menu-item.nested:hover { color: var(--c-text-primary); }
 .menu-item.nested.active {
-  background: var(--c-teal);
-  color: var(--c-bg);
+  background: #5be49e3b;
+  color: #5be49e;
   font-weight: 600;
-  box-shadow: 0 4px 14px -4px rgba(45, 212, 191, 0.40);
 }
-.menu-item.nested.active lucide-icon { color: var(--c-bg); opacity: 1; }
+.menu-item.nested.active lucide-icon { color: #5be49e; opacity: 1; }
 
 /* Collapsed state — keep the same pill geometry, just centered */
 .sidebar.collapsed .menu { padding: 14px 10px; }

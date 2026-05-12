@@ -105,35 +105,64 @@ export class UsersService {
 
 @Injectable({ providedIn: 'root' })
 export class RolesService {
-  // Roles are fixed seed data — fetch once, cache forever.
-  private readonly cache: Role[] = [
+  // Seeded roles + any added at runtime. Stored in a signal so list views update reactively.
+  // Note: there is no backend endpoint for role CRUD — additions live for the session only.
+  private readonly _cache = signal<Role[]>([
     { id: 1, code: 'ADMIN',         name: 'Admin',           description: 'Tam yetki',          createdAt: '' },
     { id: 2, code: 'HR',            name: 'HR',              description: 'İnsan kaynakları',   createdAt: '' },
     { id: 3, code: 'MANAGER',       name: 'Manager',         description: 'Yönetici',           createdAt: '' },
     { id: 4, code: 'TECH_LEAD',     name: 'Technical Lead',  description: 'Teknik lider',       createdAt: '' },
     { id: 5, code: 'QA_SPECIALIST', name: 'QA Specialist',   description: 'Kalite uzmanı',      createdAt: '' },
     { id: 6, code: 'WORKER',        name: 'Worker',          description: 'Çalışan',            createdAt: '' },
-  ];
+  ]);
 
-  list(): Role[] { return this.cache; }
+  list(): Role[] { return this._cache(); }
   byId(id: number | null | undefined): Role | undefined {
-    return id == null ? undefined : this.cache.find((r) => r.id === id);
+    return id == null ? undefined : this._cache().find((r) => r.id === id);
+  }
+
+  add(name: string, code?: string, description?: string): Role {
+    const normalized = (code ?? name).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+    const next: Role = {
+      id: Math.max(0, ...this._cache().map((r) => r.id)) + 1,
+      code: normalized || `ROLE_${Date.now()}`,
+      name: name.trim(),
+      description: description?.trim() || null,
+      createdAt: new Date().toISOString(),
+    };
+    this._cache.update((arr) => [...arr, next]);
+    return next;
   }
 }
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
-  private readonly cache: Team[] = [
+  // Seeded teams + any added at runtime. Same caveat as RolesService — no backend persistence.
+  private readonly _cache = signal<Team[]>([
     { id: 1, name: 'Engineering', description: null, isActive: true, createdAt: '', updatedAt: '' },
     { id: 2, name: 'Product',     description: null, isActive: true, createdAt: '', updatedAt: '' },
     { id: 3, name: 'Design',      description: null, isActive: true, createdAt: '', updatedAt: '' },
     { id: 4, name: 'QA',          description: null, isActive: true, createdAt: '', updatedAt: '' },
     { id: 5, name: 'DevOps',      description: null, isActive: true, createdAt: '', updatedAt: '' },
     { id: 6, name: 'Marketing',   description: null, isActive: true, createdAt: '', updatedAt: '' },
-  ];
+  ]);
 
-  list(): Team[] { return this.cache; }
+  list(): Team[] { return this._cache(); }
   byId(id: number | null | undefined): Team | undefined {
-    return id == null ? undefined : this.cache.find((t) => t.id === id);
+    return id == null ? undefined : this._cache().find((t) => t.id === id);
+  }
+
+  add(name: string, description?: string): Team {
+    const now = new Date().toISOString();
+    const next: Team = {
+      id: Math.max(0, ...this._cache().map((t) => t.id)) + 1,
+      name: name.trim(),
+      description: description?.trim() || null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this._cache.update((arr) => [...arr, next]);
+    return next;
   }
 }
