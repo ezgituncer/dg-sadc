@@ -456,7 +456,8 @@ export class WorkloadListComponent {
   categoryFor(entry: WorkloadEntry) {
     return this.lookups.findCategory(entry.activityTypeId, entry.categoryId);
   }
-  taskTypeName(id: number): string {
+  taskTypeName(id: number | null): string {
+    if (id == null) return '—';
     return this.lookups.findTaskType(id)?.name ?? '—';
   }
   canEditEntry(entry: WorkloadEntry): boolean {

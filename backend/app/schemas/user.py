@@ -13,8 +13,8 @@ class UserBase(BaseModel):
 
     email: EmailStr
     name: str = Field(min_length=1, max_length=255)
-    position: str | None = Field(default=None, max_length=255)
     role_id: int
+    position_id: int | None = None
     team_id: int | None = None
     manager_account_id: AccountId | None = None
 
@@ -32,8 +32,8 @@ class UserUpdate(BaseModel):
 
     email: EmailStr | None = None
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    position: str | None = Field(default=None, max_length=255)
     role_id: int | None = None
+    position_id: int | None = None
     team_id: int | None = None
     manager_account_id: AccountId | None = None
     is_active: bool | None = None
@@ -47,9 +47,10 @@ class UserOut(BaseModel):
     email: EmailStr
     name: str
     is_active: bool
-    position: str | None
     role_id: int
     role_code: str | None = None
+    position_id: int | None
+    position_name: str | None = None
     team_id: int | None
     manager_account_id: str | None
     created_at: datetime
@@ -63,9 +64,10 @@ class UserOut(BaseModel):
             email=user.email,
             name=user.name,
             is_active=user.is_active,
-            position=user.position,
             role_id=user.role_id,
             role_code=user.role.code if user.role else None,
+            position_id=user.position_id,
+            position_name=user.position.name if user.position else None,
             team_id=user.team_id,
             manager_account_id=user.manager_account_id,
             created_at=user.created_at,
@@ -86,6 +88,8 @@ class UserDirectoryEntry(BaseModel):
     account_id: str
     name: str
     role_code: str | None = None
+    position_id: int | None = None
+    position_name: str | None = None
     team_id: int | None = None
 
     @classmethod
@@ -94,5 +98,7 @@ class UserDirectoryEntry(BaseModel):
             account_id=user.account_id,
             name=user.name,
             role_code=user.role.code if user.role else None,
+            position_id=user.position_id,
+            position_name=user.position.name if user.position else None,
             team_id=user.team_id,
         )

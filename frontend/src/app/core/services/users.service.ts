@@ -4,6 +4,7 @@ import { firstValueFrom, Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  Position,
   Role,
   Team,
   UserCreatePayload,
@@ -105,64 +106,195 @@ export class UsersService {
 
 @Injectable({ providedIn: 'root' })
 export class RolesService {
-  // Seeded roles + any added at runtime. Stored in a signal so list views update reactively.
-  // Note: there is no backend endpoint for role CRUD — additions live for the session only.
-  private readonly _cache = signal<Role[]>([
-    { id: 1, code: 'ADMIN',         name: 'Admin',           description: 'Tam yetki',          createdAt: '' },
-    { id: 2, code: 'HR',            name: 'HR',              description: 'İnsan kaynakları',   createdAt: '' },
-    { id: 3, code: 'MANAGER',       name: 'Manager',         description: 'Yönetici',           createdAt: '' },
-    { id: 4, code: 'TECH_LEAD',     name: 'Technical Lead',  description: 'Teknik lider',       createdAt: '' },
-    { id: 5, code: 'QA_SPECIALIST', name: 'QA Specialist',   description: 'Kalite uzmanı',      createdAt: '' },
-    { id: 6, code: 'WORKER',        name: 'Worker',          description: 'Çalışan',            createdAt: '' },
-  ]);
+  private readonly base = environment.apiUrl;
+  // Backed by /api/v1/roles. Codes are immutable in the backend (CLAUDE.md);
+  // the management screen edits name + description only and there is no
+  // create / delete endpoint.
+  private readonly _cache = signal<Role[]>([]);
+  private loadPromise: Promise<Role[]> | null = null;
+
+  constructor(private readonly http: HttpClient) {
+    this.load().catch(() => {});
+  }
 
   list(): Role[] { return this._cache(); }
   byId(id: number | null | undefined): Role | undefined {
     return id == null ? undefined : this._cache().find((r) => r.id === id);
   }
 
-  add(name: string, code?: string, description?: string): Role {
-    const normalized = (code ?? name).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_');
-    const next: Role = {
-      id: Math.max(0, ...this._cache().map((r) => r.id)) + 1,
-      code: normalized || `ROLE_${Date.now()}`,
-      name: name.trim(),
-      description: description?.trim() || null,
-      createdAt: new Date().toISOString(),
-    };
-    this._cache.update((arr) => [...arr, next]);
-    return next;
+  load(): Promise<Role[]> {
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = firstValueFrom(this.http.get<Role[]>(`${this.base}/roles`))
+      .then((rows) => {
+        this._cache.set(rows);
+        this.loadPromise = null;
+        return rows;
+      })
+      .catch((err) => {
+        this.loadPromise = null;
+        throw err;
+      });
+    return this.loadPromise;
+  }
+
+  update(id: number, payload: { name?: string; description?: string | null }): Observable<Role> {
+    return this.http.patch<Role>(`${this.base}/roles/${id}`, payload).pipe(
+      tap((updated) => {
+        this._cache.update((arr) => arr.map((r) => (r.id === updated.id ? updated : r)));
+      }),
+    );
   }
 }
 
 @Injectable({ providedIn: 'root' })
 export class TeamsService {
-  // Seeded teams + any added at runtime. Same caveat as RolesService — no backend persistence.
-  private readonly _cache = signal<Team[]>([
-    { id: 1, name: 'Engineering', description: null, isActive: true, createdAt: '', updatedAt: '' },
-    { id: 2, name: 'Product',     description: null, isActive: true, createdAt: '', updatedAt: '' },
-    { id: 3, name: 'Design',      description: null, isActive: true, createdAt: '', updatedAt: '' },
-    { id: 4, name: 'QA',          description: null, isActive: true, createdAt: '', updatedAt: '' },
-    { id: 5, name: 'DevOps',      description: null, isActive: true, createdAt: '', updatedAt: '' },
-    { id: 6, name: 'Marketing',   description: null, isActive: true, createdAt: '', updatedAt: '' },
-  ]);
+  private readonly base = environment.apiUrl;
+  // Backed by /api/v1/teams. Full CRUD with soft-delete.
+  private readonly _cache = signal<Team[]>([]);
+  private loadPromise: Promise<Team[]> | null = null;
+
+  constructor(private readonly http: HttpClient) {
+    this.load().catch(() => {});
+  }
 
   list(): Team[] { return this._cache(); }
   byId(id: number | null | undefined): Team | undefined {
     return id == null ? undefined : this._cache().find((t) => t.id === id);
   }
 
-  add(name: string, description?: string): Team {
-    const now = new Date().toISOString();
-    const next: Team = {
-      id: Math.max(0, ...this._cache().map((t) => t.id)) + 1,
-      name: name.trim(),
-      description: description?.trim() || null,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this._cache.update((arr) => [...arr, next]);
-    return next;
+  load(includeInactive = false): Promise<Team[]> {
+    // The shared signal always holds only active teams — most callers (filters,
+    // user form dropdowns) only want active. The management page re-fetches
+    // with includeInactive itself.
+    if (!includeInactive && this.loadPromise) return this.loadPromise;
+    const params = includeInactive ? new HttpParams().set('include_inactive', 'true') : new HttpParams();
+    const promise = firstValueFrom(this.http.get<Team[]>(`${this.base}/teams`, { params }))
+      .then((rows) => {
+        if (!includeInactive) this._cache.set(rows);
+        return rows;
+      });
+    if (!includeInactive) this.loadPromise = promise.finally(() => { this.loadPromise = null; });
+    return promise;
+  }
+
+  create(payload: { name: string; description?: string | null }): Observable<Team> {
+    return this.http.post<Team>(`${this.base}/teams`, payload).pipe(
+      tap((created) => {
+        this._cache.update((arr) => [...arr, created]);
+      }),
+    );
+  }
+
+  update(id: number, payload: { name?: string; description?: string | null; isActive?: boolean }): Observable<Team> {
+    return this.http.patch<Team>(`${this.base}/teams/${id}`, payload).pipe(
+      tap((updated) => {
+        this._cache.update((arr) => {
+          const idx = arr.findIndex((t) => t.id === updated.id);
+          if (idx < 0) return updated.isActive ? [...arr, updated] : arr;
+          if (!updated.isActive) return arr.filter((t) => t.id !== updated.id);
+          const copy = arr.slice();
+          copy[idx] = updated;
+          return copy;
+        });
+      }),
+    );
+  }
+
+  softDelete(id: number): Observable<Team> {
+    return this.http.delete<Team>(`${this.base}/teams/${id}`).pipe(
+      tap(() => {
+        this._cache.update((arr) => arr.filter((t) => t.id !== id));
+      }),
+    );
+  }
+
+  activate(id: number): Observable<Team> {
+    return this.http.post<Team>(`${this.base}/teams/${id}/activate`, {}).pipe(
+      tap((reactivated) => {
+        this._cache.update((arr) => {
+          if (arr.some((t) => t.id === reactivated.id)) {
+            return arr.map((t) => (t.id === reactivated.id ? reactivated : t));
+          }
+          return [...arr, reactivated];
+        });
+      }),
+    );
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class PositionsService {
+  private readonly base = environment.apiUrl;
+  // Backed by /api/v1/positions. Drives the org hierarchy (independent from
+  // roles, which are auth-only). Tree shape is captured by `parentPositionId`.
+  private readonly _cache = signal<Position[]>([]);
+  private loadPromise: Promise<Position[]> | null = null;
+
+  constructor(private readonly http: HttpClient) {
+    this.load().catch(() => {});
+  }
+
+  list(): Position[] { return this._cache(); }
+  byId(id: number | null | undefined): Position | undefined {
+    return id == null ? undefined : this._cache().find((p) => p.id === id);
+  }
+  /** Direct children of the given position (or roots when parentId is null). */
+  childrenOf(parentId: number | null): Position[] {
+    return this._cache().filter((p) => p.parentPositionId === parentId);
+  }
+
+  load(includeInactive = false): Promise<Position[]> {
+    if (!includeInactive && this.loadPromise) return this.loadPromise;
+    const params = includeInactive
+      ? new HttpParams().set('include_inactive', 'true')
+      : new HttpParams();
+    const promise = firstValueFrom(
+      this.http.get<Position[]>(`${this.base}/positions`, { params }),
+    ).then((rows) => {
+      if (!includeInactive) this._cache.set(rows);
+      return rows;
+    });
+    if (!includeInactive) this.loadPromise = promise.finally(() => { this.loadPromise = null; });
+    return promise;
+  }
+
+  create(payload: { name: string; parentPositionId: number | null; description?: string | null }): Observable<Position> {
+    return this.http.post<Position>(`${this.base}/positions`, payload).pipe(
+      tap((created) => this._cache.update((arr) => [...arr, created])),
+    );
+  }
+
+  update(id: number, payload: { name?: string; parentPositionId?: number | null; description?: string | null; isActive?: boolean }): Observable<Position> {
+    return this.http.patch<Position>(`${this.base}/positions/${id}`, payload).pipe(
+      tap((updated) => {
+        this._cache.update((arr) => {
+          const idx = arr.findIndex((p) => p.id === updated.id);
+          if (idx < 0) return updated.isActive ? [...arr, updated] : arr;
+          if (!updated.isActive) return arr.filter((p) => p.id !== updated.id);
+          const copy = arr.slice();
+          copy[idx] = updated;
+          return copy;
+        });
+      }),
+    );
+  }
+
+  softDelete(id: number): Observable<Position> {
+    return this.http.delete<Position>(`${this.base}/positions/${id}`).pipe(
+      tap(() => this._cache.update((arr) => arr.filter((p) => p.id !== id))),
+    );
+  }
+
+  activate(id: number): Observable<Position> {
+    return this.http.post<Position>(`${this.base}/positions/${id}/activate`, {}).pipe(
+      tap((reactivated) => {
+        this._cache.update((arr) => {
+          if (arr.some((p) => p.id === reactivated.id)) {
+            return arr.map((p) => (p.id === reactivated.id ? reactivated : p));
+          }
+          return [...arr, reactivated];
+        });
+      }),
+    );
   }
 }

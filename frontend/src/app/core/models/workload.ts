@@ -8,7 +8,7 @@ export interface WorkloadEntry {
   activityTypeId: number;
   categoryId: number;
   projectId: number | null;
-  taskTypeId: number;
+  taskTypeId: number | null;
   taskDescription: string;
   status: WorkStatus;
   complexity: Complexity;
@@ -30,7 +30,7 @@ export interface WorkloadEntryCreate {
   activityTypeId: number;
   categoryId: number;
   projectId: number | null;
-  taskTypeId: number;
+  taskTypeId: number | null;
   taskDescription: string;
   status: WorkStatus;
   complexity: Complexity;

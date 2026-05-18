@@ -12,6 +12,7 @@ import { CommonModule } from '@angular/common';
 import { LucideAngularModule, Save } from 'lucide-angular';
 
 import {
+  PositionsService,
   RolesService,
   TeamsService,
   UsersService,
@@ -26,18 +27,11 @@ interface OrgNodeData {
   reports: OrgNodeData[];
 }
 
-const QA_TEAM_ID = 4;
-// Roles whose users belong in the side panels rather than the org tree.
-const HR_PANEL_ROLES = new Set(['HR']);
-// Anyone in the QA team (any role) is shown in the QA side panel.
-function isQaPanel(u: UserListItem): boolean {
-  return u.teamId === QA_TEAM_ID;
-}
-function isHrPanel(u: UserListItem): boolean {
-  return HR_PANEL_ROLES.has(u.roleCode);
-}
-// Roles that show up in their manager's roster panel instead of as their own card.
-const ROSTER_ROLES = new Set(['WORKER', 'TECH_LEAD']);
+// Root position names whose subtrees go into the side panels instead of the
+// main org tree. These names match the seeded positions table 1:1; renaming a
+// position in DB would silently break this.
+const HR_SUBTREE_ROOT = 'HR Manager';
+const QA_SUBTREE_ROOT = 'QA Lead';
 
 @Component({
   selector: 'app-dashboard',
@@ -51,7 +45,35 @@ export class DashboardComponent implements OnInit {
   private readonly api = inject(UsersService);
   protected readonly roles = inject(RolesService);
   protected readonly teams = inject(TeamsService);
+  protected readonly positions = inject(PositionsService);
   private readonly localeSvc = inject(LocaleService);
+
+  /** True if `positionId` is the given name or a descendant of it in the
+   *  position tree. Walks up via `parentPositionId`. */
+  private isInPositionSubtree(positionId: number | null, rootName: string): boolean {
+    let pos = this.positions.byId(positionId);
+    let guard = 50; // safety against malformed cycles
+    while (pos && guard-- > 0) {
+      if (pos.name === rootName) return true;
+      pos = this.positions.byId(pos.parentPositionId);
+    }
+    return false;
+  }
+
+  /** Positions that always render as their own card with children below. All
+   *  other positions (including Tech Lead, workers) render in the parent's
+   *  roster strip. Kept in sync with `cardPositionLabel` minus TL. */
+  private isBranchPosition(positionName: string | null | undefined): boolean {
+    if (!positionName) return false;
+    const name = positionName.trim();
+    return (
+      name === 'Director' ||
+      name === 'Head of Engineering' ||
+      name === 'Engineering Manager' ||
+      name === 'Product Manager' ||
+      name === 'Product Owner'
+    );
+  }
 
   readonly saveIcon = Save;
 
@@ -66,10 +88,16 @@ export class DashboardComponent implements OnInit {
 
   readonly activeUsers = computed(() => this.users().filter((u) => u.isActive));
 
-  // Tree contains everyone who is not in the HR or QA side panels.
+  // Tree contains everyone whose position is not under HR or QA.
   readonly roots = computed<OrgNodeData[]>(() => {
+    // Touch the positions signal so the tree recomputes when positions load.
+    this.positions.list();
     const all = this.activeUsers();
-    const eligible = all.filter((u) => !isHrPanel(u) && !isQaPanel(u));
+    const eligible = all.filter(
+      (u) =>
+        !this.isInPositionSubtree(u.positionId, HR_SUBTREE_ROOT) &&
+        !this.isInPositionSubtree(u.positionId, QA_SUBTREE_ROOT),
+    );
     return eligible
       .filter(
         (u) =>
@@ -80,8 +108,18 @@ export class DashboardComponent implements OnInit {
       .sort((a, b) => a.user.name.localeCompare(b.user.name, 'tr'));
   });
 
-  readonly hrUsers = computed(() => this.activeUsers().filter(isHrPanel));
-  readonly qaUsers = computed(() => this.activeUsers().filter(isQaPanel));
+  readonly hrUsers = computed(() => {
+    this.positions.list();
+    return this.activeUsers().filter((u) =>
+      this.isInPositionSubtree(u.positionId, HR_SUBTREE_ROOT),
+    );
+  });
+  readonly qaUsers = computed(() => {
+    this.positions.list();
+    return this.activeUsers().filter((u) =>
+      this.isInPositionSubtree(u.positionId, QA_SUBTREE_ROOT),
+    );
+  });
 
   readonly stats = computed(() => {
     const all = this.activeUsers();
@@ -138,14 +176,44 @@ export class DashboardComponent implements OnInit {
     return this.teams.byId(teamId)?.name ?? '';
   }
 
-  /** Children that are managers — they expand the tree downward as cards. */
+  /** Children rendered as their own card (Director/HEM/EM/PM/PO). */
   branchReports(node: OrgNodeData): OrgNodeData[] {
-    return node.reports.filter((r) => !ROSTER_ROLES.has(r.user.roleCode));
+    return node.reports.filter((r) => this.isBranchPosition(r.user.positionName));
   }
 
-  /** Children that are individual contributors (worker + tech-lead) — compact list. */
+  /** Position pill text for a card. Returns the full position name only for
+   *  Director / HEM / EM; short abbreviations for TL / PM / PO; null (no pill)
+   *  for everything else. */
+  cardPositionLabel(positionName: string | null | undefined): string | null {
+    if (!positionName) return null;
+    const name = positionName.trim();
+    if (name === 'Director') return 'Director';
+    if (name === 'Head of Engineering') return 'Head of Engineering';
+    if (name === 'Engineering Manager') return 'Engineering Manager';
+    if (name === 'Product Manager') return 'PM';
+    if (name === 'Product Owner') return 'PO';
+    if (/Tech Lead$/i.test(name)) return 'TL';
+    return null;
+  }
+
+  /** CSS class paired with `cardPositionLabel` — keyed off the same set. The
+   *  styles live in dashboard.component.css (`.pos-director`, `.pos-hem`, etc).
+   *  Returns '' (no class) when there is no pill. */
+  cardPositionClass(positionName: string | null | undefined): string {
+    if (!positionName) return '';
+    const name = positionName.trim();
+    if (name === 'Director') return 'pos-director';
+    if (name === 'Head of Engineering') return 'pos-hem';
+    if (name === 'Engineering Manager') return 'pos-em';
+    if (name === 'Product Manager') return 'pos-pm';
+    if (name === 'Product Owner') return 'pos-po';
+    if (/Tech Lead$/i.test(name)) return 'pos-tl';
+    return '';
+  }
+
+  /** Everyone else — compact roster strip under the parent card. */
   rosterReports(node: OrgNodeData): OrgNodeData[] {
-    return node.reports.filter((r) => ROSTER_ROLES.has(r.user.roleCode));
+    return node.reports.filter((r) => !this.isBranchPosition(r.user.positionName));
   }
 
   /** Capture the tree + outside-tree section as a single PNG and trigger a download.

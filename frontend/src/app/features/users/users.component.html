@@ -29,15 +29,6 @@
           <option [ngValue]="r.id">{{ r.name }}</option>
         }
       </select>
-      <button
-        type="button"
-        class="add-pill"
-        (click)="openAddRole()"
-        [title]="'users.btn_add_role' | t"
-        [attr.aria-label]="'users.btn_add_role' | t"
-      >
-        <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
-      </button>
     </div>
     <div class="dropdown-group">
       <select class="dropdown" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)">
@@ -96,7 +87,7 @@
                     <span class="email">{{ u.email }}</span>
                   </div>
                 </td>
-                <td class="position">{{ u.position || '—' }}</td>
+                <td class="position">{{ u.positionName || '—' }}</td>
                 <td>
                   <span class="role-pill" [class]="'role-' + roleCodeFor(u.roleId).toLowerCase()">
                     {{ roleLabel(u.roleId) }}
@@ -230,13 +221,16 @@
           </div>
           <div class="field">
             <label>{{ 'users.field_position' | t }}</label>
-            <input
-              type="text"
+            <select
               class="input"
-              [ngModel]="form().position"
-              (ngModelChange)="patch('position', $event)"
-              [placeholder]="'users.placeholder_position' | t"
-            />
+              [ngModel]="form().positionId"
+              (ngModelChange)="patch('positionId', $event)"
+            >
+              <option [ngValue]="null">{{ 'common.select' | t }}</option>
+              @for (p of positions.list(); track p.id) {
+                <option [ngValue]="p.id">{{ p.name }}</option>
+              }
+            </select>
           </div>
           @if (creating()) {
             <div class="field">

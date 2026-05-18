@@ -10,30 +10,39 @@ export type LookupKind =
   | 'task-types'
   | 'project-categories'
   | 'non-project-categories'
-  | 'self-imp-categories';
+  | 'self-imp-categories'
+  | 'teams'
+  | 'roles'
+  | 'positions';
 
 export interface LookupListItem {
   id: number;
-  code: string;
+  // Teams have no `code`; roles have a code but it's immutable; positions
+  // identify themselves by `name` plus an optional `parentPositionId`.
+  code?: string;
   name: string;
   description?: string | null;
   color?: string;
-  isActive: boolean;
+  parentPositionId?: number | null;
+  // Roles have no soft-delete; `isActive` will be undefined for that tab.
+  isActive?: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface LookupCreatePayload {
-  code: string;
+  code?: string;
   name: string;
   description?: string;
   color?: string;
+  parentPositionId?: number | null;
 }
 
 export interface LookupUpdatePayload {
   name?: string;
   description?: string;
   color?: string;
+  parentPositionId?: number | null;
   isActive?: boolean;
 }
 

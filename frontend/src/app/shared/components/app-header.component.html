@@ -28,8 +28,8 @@
           <div class="profile-tags">
             <span class="tag tag-teal">{{ roleLabel() }}</span>
           </div>
-          @if (user.position) {
-            <div class="profile-position">{{ user.position }}</div>
+          @if (user.positionName) {
+            <div class="profile-position">{{ user.positionName }}</div>
           }
           <div class="profile-id">{{ 'nav.id' | t }}: {{ user.accountId }}</div>
         </div>

@@ -28,6 +28,7 @@ import {
 } from '../../core/services/lookup-crud.service';
 import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
+import { PositionsService, RolesService, TeamsService } from '../../core/services/users.service';
 import { ToastComponent } from '../../shared/components/toast.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
@@ -38,15 +39,25 @@ interface Tab {
   labelKey: string;
   hasColor: boolean;
   hasDescription: boolean;
+  /** Teams + positions have no `code`; this hides the column & input. */
+  hasCode: boolean;
+  /** Positions have a parent dropdown — none of the others do. */
+  hasParent: boolean;
+  /** Roles cannot be created (code-immutable, permissions hardcoded). */
+  canCreate: boolean;
+  /** Roles cannot be soft-deleted — no `is_active` column. */
+  canSoftDelete: boolean;
 }
 
 const TABS: Tab[] = [
-  { kind: 'projects',                labelKey: 'lookups.tab_projects',                 hasColor: false, hasDescription: true },
-  { kind: 'activity-types',          labelKey: 'lookups.tab_activity_types',           hasColor: false, hasDescription: true },
-  { kind: 'project-categories',      labelKey: 'lookups.tab_project_categories',       hasColor: true,  hasDescription: false },
-  { kind: 'non-project-categories',  labelKey: 'lookups.tab_non_project_categories',   hasColor: true,  hasDescription: false },
-  { kind: 'self-imp-categories',     labelKey: 'lookups.tab_self_imp_categories',      hasColor: true,  hasDescription: false },
-  { kind: 'task-types',              labelKey: 'lookups.tab_task_types',               hasColor: false, hasDescription: false },
+  { kind: 'projects',                labelKey: 'lookups.tab_projects',                 hasColor: false, hasDescription: true,  hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'activity-types',          labelKey: 'lookups.tab_activity_types',           hasColor: false, hasDescription: true,  hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'project-categories',      labelKey: 'lookups.tab_project_categories',       hasColor: true,  hasDescription: false, hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'non-project-categories',  labelKey: 'lookups.tab_non_project_categories',   hasColor: true,  hasDescription: false, hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'self-imp-categories',     labelKey: 'lookups.tab_self_imp_categories',      hasColor: true,  hasDescription: false, hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'teams',                   labelKey: 'lookups.tab_teams',                    hasColor: false, hasDescription: true,  hasCode: false, hasParent: false, canCreate: true,  canSoftDelete: true  },
+  { kind: 'positions',               labelKey: 'lookups.tab_positions',                hasColor: false, hasDescription: true,  hasCode: false, hasParent: true,  canCreate: true,  canSoftDelete: true  },
+  { kind: 'roles',                   labelKey: 'lookups.tab_roles',                    hasColor: false, hasDescription: true,  hasCode: true,  hasParent: false, canCreate: false, canSoftDelete: false },
 ];
 
 const COLOR_PALETTE = [
@@ -60,6 +71,7 @@ interface ModalState {
   name: string;
   description: string;
   color: string;
+  parentPositionId: number | null;
   itemId?: number;
   isActive?: boolean;
 }
@@ -82,6 +94,9 @@ interface ModalState {
 export class LookupsComponent {
   private readonly api = inject(LookupCrudService);
   private readonly lookups = inject(LookupService);
+  private readonly teamsSvc = inject(TeamsService);
+  private readonly rolesSvc = inject(RolesService);
+  protected readonly positionsSvc = inject(PositionsService);
   private readonly localeSvc = inject(LocaleService);
 
   readonly icons = { Plus, Edit2, Trash2, Power, Search, X, Save };
@@ -105,7 +120,7 @@ export class LookupsComponent {
     const q = this.search().trim().toLowerCase();
     if (!q) return this.items();
     return this.items().filter(
-      (it) => it.code.toLowerCase().includes(q) || it.name.toLowerCase().includes(q),
+      (it) => (it.code ?? '').toLowerCase().includes(q) || it.name.toLowerCase().includes(q),
     );
   });
 
@@ -137,9 +152,13 @@ export class LookupsComponent {
   }
 
   refetch(): void {
-    this.fetch(this.activeTab().kind, this.includeInactive());
-    // Refresh global lookup cache so other pages see the change.
+    const kind = this.activeTab().kind;
+    this.fetch(kind, this.includeInactive());
+    // Refresh global caches so other pages (filters, dropdowns) see the change.
     this.lookups.loadAll().catch(() => {});
+    if (kind === 'teams') this.teamsSvc.load().catch(() => {});
+    if (kind === 'roles') this.rolesSvc.load().catch(() => {});
+    if (kind === 'positions') this.positionsSvc.load().catch(() => {});
   }
 
   startCreate(): void {
@@ -150,6 +169,7 @@ export class LookupsComponent {
       name: '',
       description: '',
       color: this.colorPalette[0],
+      parentPositionId: null,
     });
   }
 
@@ -157,10 +177,11 @@ export class LookupsComponent {
     this.codeError.set(null);
     this.modal.set({
       mode: 'edit',
-      code: item.code,
+      code: item.code ?? '',
       name: item.name,
       description: item.description ?? '',
       color: item.color ?? this.colorPalette[0],
+      parentPositionId: item.parentPositionId ?? null,
       itemId: item.id,
       isActive: item.isActive,
     });
@@ -178,7 +199,7 @@ export class LookupsComponent {
   saveModal(): void {
     const m = this.modal();
     if (!m || this.saving()) return;
-    if (m.mode === 'create' && !/^[A-Z0-9_-]+$/.test(m.code)) {
+    if (m.mode === 'create' && this.activeTab().hasCode && !/^[A-Z0-9_-]+$/.test(m.code)) {
       this.codeError.set(this.localeSvc.t('lookups.code_regex_msg'));
       return;
     }
@@ -190,11 +211,12 @@ export class LookupsComponent {
 
     if (m.mode === 'create') {
       const payload: LookupCreatePayload = {
-        code: m.code,
         name: m.name.trim(),
       };
+      if (this.activeTab().hasCode) payload.code = m.code;
       if (this.activeTab().hasDescription) payload.description = m.description.trim() || undefined;
       if (this.activeTab().hasColor) payload.color = m.color;
+      if (this.activeTab().hasParent) payload.parentPositionId = m.parentPositionId;
       this.api.create(this.activeTab().kind, payload).subscribe({
         next: () => {
           this.saving.set(false);
@@ -208,6 +230,7 @@ export class LookupsComponent {
       const payload: LookupUpdatePayload = { name: m.name.trim() };
       if (this.activeTab().hasDescription) payload.description = m.description.trim();
       if (this.activeTab().hasColor) payload.color = m.color;
+      if (this.activeTab().hasParent) payload.parentPositionId = m.parentPositionId;
       this.api.update(this.activeTab().kind, m.itemId!, payload).subscribe({
         next: () => {
           this.saving.set(false);

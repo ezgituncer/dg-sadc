@@ -79,7 +79,8 @@ export class LookupService {
     return this._activityTypes().find((a) => a.id === id);
   }
 
-  findTaskType(id: number): TaskType | undefined {
+  findTaskType(id: number | null | undefined): TaskType | undefined {
+    if (id == null) return undefined;
     return this._taskTypes().find((t) => t.id === id);
   }
 }

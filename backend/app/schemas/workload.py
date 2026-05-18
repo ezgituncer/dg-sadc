@@ -18,7 +18,7 @@ class WorkloadEntryCreate(WorkloadEntryBase):
     activity_type_id: int = Field(ge=1)
     category_id: int = Field(ge=1)
     project_id: int | None = None
-    task_type_id: int = Field(ge=1)
+    task_type_id: int | None = Field(default=None, ge=1)
     task_description: str = Field(min_length=1, max_length=10000)
     status: WorkStatus
     complexity: Complexity
@@ -62,7 +62,7 @@ class WorkloadEntryOut(WorkloadEntryBase):
     activity_type_id: int
     category_id: int
     project_id: int | None
-    task_type_id: int
+    task_type_id: int | None
     task_description: str
     status: WorkStatus
     complexity: Complexity

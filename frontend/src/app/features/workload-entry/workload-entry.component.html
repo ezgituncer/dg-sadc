@@ -70,28 +70,8 @@
         </div>
       }
 
-      <!-- Category & Project -->
+      <!-- Project & Category -->
       <div class="grid-2">
-        <div class="field">
-          <div class="field-label">
-            <lucide-icon [img]="icons.Tag" size="12"></lucide-icon>
-            {{ 'workload_entry.category' | t }} <span class="req">*</span>
-          </div>
-          <select
-            class="select"
-            [disabled]="!form().activityTypeId"
-            [ngModel]="form().categoryId"
-            (ngModelChange)="patch('categoryId', $event)"
-          >
-            <option [ngValue]="null">
-              {{ form().activityTypeId ? ('workload_entry.category_placeholder' | t) : ('common.pick_first' | t) }}
-            </option>
-            @for (cat of categoryOptions(); track cat.id) {
-              <option [ngValue]="cat.id">{{ cat.name }}</option>
-            }
-          </select>
-        </div>
-
         @if (isProjectActivity()) {
           <div class="field">
             <div class="field-label">
@@ -109,23 +89,24 @@
               }
             </select>
           </div>
-        } @else {
-          <div></div>
         }
 
         <div class="field">
           <div class="field-label">
-            <lucide-icon [img]="icons.Layers" size="12"></lucide-icon>
-            {{ 'workload_entry.task_type' | t }} <span class="req">*</span>
+            <lucide-icon [img]="icons.Tag" size="12"></lucide-icon>
+            {{ 'workload_entry.category' | t }} <span class="req">*</span>
           </div>
           <select
             class="select"
-            [ngModel]="form().taskTypeId"
-            (ngModelChange)="patch('taskTypeId', $event)"
+            [disabled]="!form().activityTypeId"
+            [ngModel]="form().categoryId"
+            (ngModelChange)="patch('categoryId', $event)"
           >
-            <option [ngValue]="null">{{ 'workload_entry.task_type_placeholder' | t }}</option>
-            @for (t of taskTypeOptions(); track t.id) {
-              <option [ngValue]="t.id">{{ t.name }}</option>
+            <option [ngValue]="null">
+              {{ form().activityTypeId ? ('workload_entry.category_placeholder' | t) : ('common.pick_first' | t) }}
+            </option>
+            @for (cat of categoryOptions(); track cat.id) {
+              <option [ngValue]="cat.id">{{ cat.name }}</option>
             }
           </select>
         </div>
@@ -301,7 +282,9 @@
                   @if (projectFor(entry); as p) {
                     <span>· {{ p.name }}</span>
                   }
-                  <span>· {{ taskTypeFor(entry)?.name }}</span>
+                  @if (taskTypeFor(entry); as tt) {
+                    <span>· {{ tt.name }}</span>
+                  }
                   <span class="hours-pill">{{ entry.hoursSpent }}h</span>
                 </div>
                 @if (canEditEntry(entry)) {

@@ -103,9 +103,18 @@
 }
 .role-pill, .team-pill {
   display: inline-block; padding: 1px 7px;
-  border-radius: 9px; font-size: 9px;
+  border-radius: 9px; font-size: 9px; font-weight: 500; white-space: nowrap;
+  background: rgba(148, 163, 184, 0.12); color: var(--c-text-secondary);
 }
 .team-pill { background: rgba(148, 163, 184, 0.10); color: var(--c-text-secondary); }
+
+/* Position pills — color-keyed by position (see cardPositionClass) */
+.pos-director { background: rgba(239, 68, 68, 0.16);  color: var(--c-red); }
+.pos-hem      { background: rgba(167, 139, 250, 0.16); color: var(--c-purple); }
+.pos-em       { background: rgba(59, 130, 246, 0.16);  color: var(--c-blue); }
+.pos-pm       { background: rgba(245, 158, 11, 0.16);  color: var(--c-amber); }
+.pos-po       { background: rgba(16, 185, 129, 0.16);  color: var(--c-green); }
+.pos-tl       { background: rgba(45, 212, 191, 0.16);  color: var(--c-teal); }
 .org-position {
   font-size: 10px; color: var(--c-text-muted); margin-top: 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

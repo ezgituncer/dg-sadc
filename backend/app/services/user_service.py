@@ -1,52 +1,84 @@
-"""Business logic for users — CRUD + hierarchy validation + soft delete."""
+"""Business logic for users — CRUD + position-based hierarchy + soft delete.
+
+The org hierarchy lives entirely on `position` now. `role` is auth-only and
+deliberately not consulted by `_validate_hierarchy`. Rule: a user holding
+position P must report to a user whose position is exactly P.parent_position.
+Root positions (parent_position_id IS NULL) cannot have a manager.
+"""
 from __future__ import annotations
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.models import Role, User
+from app.models import Position, User
 from app.schemas.user import UserCreate, UserUpdate
 
 
-WORKER_ROLE_CODE = "WORKER"
-MANAGER_ROLE_CODE = "MANAGER"
-
-
-async def _get_role(db: AsyncSession, role_id: int) -> Role:
-    role = (await db.execute(select(Role).where(Role.id == role_id))).scalar_one_or_none()
-    if role is None:
-        raise HTTPException(status_code=400, detail=f"Unknown role_id={role_id}")
-    return role
+async def _get_position(db: AsyncSession, position_id: int) -> Position:
+    pos = (
+        await db.execute(select(Position).where(Position.id == position_id))
+    ).scalar_one_or_none()
+    if pos is None:
+        raise HTTPException(status_code=400, detail=f"Unknown position_id={position_id}")
+    if not pos.is_active:
+        raise HTTPException(status_code=400, detail=f"Position {pos.name!r} is inactive")
+    return pos
 
 
 async def _validate_hierarchy(
     db: AsyncSession,
-    role_id: int,
+    position_id: int | None,
     manager_account_id: str | None,
 ) -> None:
-    """Enforce: a WORKER's manager must have role MANAGER (cannot be another WORKER)."""
-    role = await _get_role(db, role_id)
-    if role.code != WORKER_ROLE_CODE:
+    """A user's manager must hold the parent position of theirs.
+
+    - position_id is None      → no constraint (legacy users with no position set).
+    - parent_position_id None  → root: must NOT have a manager.
+    - otherwise                → manager required and manager.position_id must
+                                 equal user.position.parent_position_id.
+    """
+    if position_id is None:
         return
+
+    pos = await _get_position(db, position_id)
+
+    if pos.parent_position_id is None:
+        if manager_account_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Position {pos.name!r} is a root position — manager must be empty"
+                ),
+            )
+        return
+
     if manager_account_id is None:
+        parent = await _get_position(db, pos.parent_position_id)
         raise HTTPException(
             status_code=400,
-            detail="Workers must have a manager (manager_account_id is required)",
+            detail=(
+                f"Position {pos.name!r} requires a manager whose position is "
+                f"{parent.name!r}"
+            ),
         )
+
     manager = (
         await db.execute(select(User).where(User.account_id == manager_account_id))
     ).scalar_one_or_none()
     if manager is None or not manager.is_active:
+        raise HTTPException(status_code=400, detail="Manager not found or inactive")
+
+    if manager.position_id != pos.parent_position_id:
+        parent = await _get_position(db, pos.parent_position_id)
+        manager_pos_name = manager.position.name if manager.position else "(none)"
         raise HTTPException(
             status_code=400,
-            detail="Manager not found or inactive",
-        )
-    if manager.role and manager.role.code != MANAGER_ROLE_CODE:
-        raise HTTPException(
-            status_code=400,
-            detail="A worker's manager must have role MANAGER",
+            detail=(
+                f"Manager's position is {manager_pos_name!r}, but position "
+                f"{pos.name!r} must report to {parent.name!r}"
+            ),
         )
 
 
@@ -99,7 +131,7 @@ async def create_user(db: AsyncSession, payload: UserCreate) -> User:
     if exists_email is not None:
         raise HTTPException(status_code=400, detail="email already in use")
 
-    await _validate_hierarchy(db, payload.role_id, payload.manager_account_id)
+    await _validate_hierarchy(db, payload.position_id, payload.manager_account_id)
 
     user = User(
         account_id=payload.account_id,
@@ -107,8 +139,8 @@ async def create_user(db: AsyncSession, payload: UserCreate) -> User:
         name=payload.name,
         password_hash=hash_password(payload.password),
         is_active=payload.is_active,
-        position=payload.position,
         role_id=payload.role_id,
+        position_id=payload.position_id,
         team_id=payload.team_id,
         manager_account_id=payload.manager_account_id,
     )
@@ -144,11 +176,12 @@ async def update_user(
                 raise HTTPException(status_code=400, detail="email already in use")
             data["email"] = new_email
 
-    # If role/manager change, re-validate hierarchy
-    new_role_id = data.get("role_id", user.role_id)
+    # If position/manager change, re-validate hierarchy. Role no longer
+    # participates in the hierarchy check — auth-only now.
+    new_position_id = data.get("position_id", user.position_id)
     new_manager = data.get("manager_account_id", user.manager_account_id)
-    if "role_id" in data or "manager_account_id" in data:
-        await _validate_hierarchy(db, new_role_id, new_manager)
+    if "position_id" in data or "manager_account_id" in data:
+        await _validate_hierarchy(db, new_position_id, new_manager)
 
     for field, value in data.items():
         setattr(user, field, value)

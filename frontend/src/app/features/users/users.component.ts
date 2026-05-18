@@ -25,6 +25,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { LocaleService } from '../../core/services/locale.service';
 import {
+  PositionsService,
   RolesService,
   TeamsService,
   UsersService,
@@ -45,8 +46,8 @@ interface FormState {
   email: string;
   name: string;
   password: string;
-  position: string;
   roleId: number | null;
+  positionId: number | null;
   teamId: number | null;
   managerAccountId: string | null;
   isActive: boolean;
@@ -57,8 +58,8 @@ const EMPTY_FORM: FormState = {
   email: '',
   name: '',
   password: '',
-  position: '',
   roleId: null,
+  positionId: null,
   teamId: null,
   managerAccountId: null,
   isActive: true,
@@ -85,6 +86,7 @@ export class UsersComponent {
   private readonly api = inject(UsersService);
   protected readonly roles = inject(RolesService);
   protected readonly teams = inject(TeamsService);
+  protected readonly positions = inject(PositionsService);
   private readonly localeSvc = inject(LocaleService);
 
   readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight, Plus };
@@ -151,12 +153,18 @@ export class UsersComponent {
     return JSON.stringify(a) !== JSON.stringify(b);
   });
 
-  // Possible managers: every active non-self user with role MANAGER (extend later if needed).
+  // Possible managers: active users whose position matches the parent of the
+  // selected user's position. If no position is selected, fall back to all
+  // active users (backend enforces the actual rule on save).
   readonly possibleManagers = computed(() => {
     const me = this.selectedId();
-    return this.items().filter(
-      (u) => u.id !== me && u.isActive && (u.roleCode === 'MANAGER'),
-    );
+    const positionId = this.form().positionId;
+    const active = this.items().filter((u) => u.id !== me && u.isActive);
+    if (positionId == null) return active;
+    const pos = this.positions.byId(positionId);
+    // Root positions (no parent) cannot have a manager — empty list.
+    if (!pos || pos.parentPositionId == null) return [];
+    return active.filter((u) => u.positionId === pos.parentPositionId);
   });
 
   constructor() {
@@ -247,8 +255,8 @@ export class UsersComponent {
       email: u.email,
       name: u.name,
       password: '',
-      position: u.position ?? '',
       roleId: u.roleId,
+      positionId: u.positionId ?? null,
       teamId: u.teamId ?? null,
       managerAccountId: u.managerAccountId ?? null,
       isActive: u.isActive,
@@ -274,8 +282,8 @@ export class UsersComponent {
         email: f.email,
         name: f.name,
         password: f.password,
-        position: f.position || null,
         roleId: f.roleId,
+        positionId: f.positionId ?? null,
         teamId: f.teamId ?? null,
         managerAccountId: f.managerAccountId ?? null,
         isActive: f.isActive,
@@ -301,8 +309,8 @@ export class UsersComponent {
       const payload: UserUpdatePayload = {
         email: f.email,
         name: f.name,
-        position: f.position || null,
         roleId: f.roleId ?? undefined,
+        positionId: f.positionId ?? null,
         teamId: f.teamId ?? null,
         managerAccountId: f.managerAccountId ?? null,
         isActive: f.isActive,
@@ -432,20 +440,10 @@ export class UsersComponent {
     this.addingRole.set(false);
   }
   submitAddRole(): void {
-    const name = this.newRoleName().trim();
-    if (!name) {
-      this.flashToast(this.localeSvc.t('common.required'), 'error');
-      return;
-    }
-    if (this.roles.list().some((r) => r.name.toLowerCase() === name.toLowerCase())) {
-      this.flashToast(this.localeSvc.t('users.role_exists'), 'error');
-      return;
-    }
-    const created = this.roles.add(name);
+    // Role codes are immutable in the backend (CLAUDE.md); creating new roles
+    // is not supported. Direct users to the management screen for edits.
     this.addingRole.set(false);
-    this.newRoleName.set('');
-    this.roleFilter.set(created.id);
-    this.flashToast(this.localeSvc.t('users.toast_role_created'), 'success');
+    this.flashToast(this.localeSvc.t('users.role_create_disabled'), 'error');
   }
 
   // --- Quick-add team ---
@@ -466,11 +464,18 @@ export class UsersComponent {
       this.flashToast(this.localeSvc.t('users.team_exists'), 'error');
       return;
     }
-    const created = this.teams.add(name);
-    this.addingTeam.set(false);
-    this.newTeamName.set('');
-    this.teamFilter.set(created.id);
-    this.flashToast(this.localeSvc.t('users.toast_team_created'), 'success');
+    this.teams.create({ name }).subscribe({
+      next: (created) => {
+        this.addingTeam.set(false);
+        this.newTeamName.set('');
+        this.teamFilter.set(created.id);
+        this.flashToast(this.localeSvc.t('users.toast_team_created'), 'success');
+      },
+      error: (err) => {
+        const detail = err?.error?.detail;
+        this.flashToast(typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_save'), 'error');
+      },
+    });
   }
 
   formatDate(iso: string | null | undefined): string {

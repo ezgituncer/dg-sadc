@@ -19,19 +19,42 @@ Internal web application for a 20–50 person company to log daily workload by c
 
 ## Quick start (development)
 
-```bash
-# 1) Bring up Postgres in Docker (creates workload_dev + workload_test)
-docker compose -f docker-compose.dev.yml up -d
+For a detailed Windows walkthrough, see [installation.md](installation.md).
 
-# 2) Backend
+### 1) Bring up Postgres in Docker (creates workload_dev + workload_test)
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+### 2) Backend
+
+**macOS / Linux**
+
+```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head                    # runs all migrations + seeds
 uvicorn app.main:app --reload --port 8000
+```
 
-# 3) Frontend (new terminal)
+**Windows (PowerShell)**
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+alembic upgrade head                    # runs all migrations + seeds
+uvicorn app.main:app --reload --port 8000
+```
+
+### 3) Frontend (new terminal)
+
+```bash
 cd frontend
 npm install
 npm start                               # http://localhost:4200

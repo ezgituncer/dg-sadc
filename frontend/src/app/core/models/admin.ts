@@ -10,8 +10,8 @@ export interface UserCreatePayload {
   email: string;
   name: string;
   password: string;
-  position?: string | null;
   roleId: number;
+  positionId?: number | null;
   teamId?: number | null;
   managerAccountId?: string | null;
   isActive?: boolean;
@@ -20,8 +20,8 @@ export interface UserCreatePayload {
 export interface UserUpdatePayload {
   email?: string;
   name?: string;
-  position?: string | null;
   roleId?: number;
+  positionId?: number | null;
   teamId?: number | null;
   managerAccountId?: string | null;
   isActive?: boolean;
@@ -38,6 +38,16 @@ export interface Role {
 export interface Team {
   id: number;
   name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Position {
+  id: number;
+  name: string;
+  parentPositionId: number | null;
   description: string | null;
   isActive: boolean;
   createdAt: string;

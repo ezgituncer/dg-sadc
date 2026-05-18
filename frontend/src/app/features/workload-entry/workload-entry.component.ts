@@ -153,7 +153,7 @@ export class WorkloadEntryComponent {
 
   readonly isFormValid = computed(() => {
     const f = this.form();
-    if (!f.activityTypeId || !f.categoryId || !f.taskTypeId) return false;
+    if (!f.activityTypeId || !f.categoryId) return false;
     if (f.activityTypeId === 1 && !f.projectId) return false;
     if (!f.taskDescription.trim()) return false;
     const h = parseFloat(f.hoursSpent);
@@ -203,7 +203,7 @@ export class WorkloadEntryComponent {
       activityTypeId: f.activityTypeId!,
       categoryId: f.categoryId!,
       projectId: this.isProjectActivity() ? f.projectId : null,
-      taskTypeId: f.taskTypeId!,
+      taskTypeId: f.taskTypeId,
       taskDescription: f.taskDescription.trim(),
       status: f.status,
       complexity: f.complexity,

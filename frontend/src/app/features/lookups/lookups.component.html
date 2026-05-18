@@ -40,10 +40,12 @@
       />
       {{ 'lookups.show_inactive' | t }}
     </label>
-    <button class="btn-primary" (click)="startCreate()">
-      <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
-      {{ 'lookups.btn_new' | t }}
-    </button>
+    @if (activeTab().canCreate) {
+      <button class="btn-primary" (click)="startCreate()">
+        <lucide-icon [img]="icons.Plus" size="13"></lucide-icon>
+        {{ 'lookups.btn_new' | t }}
+      </button>
+    }
   </div>
 
   <!-- Table -->
@@ -51,11 +53,11 @@
     <table>
       <thead>
         <tr>
-          <th>{{ 'lookups.th_code' | t }}</th>
+          @if (activeTab().hasCode) { <th>{{ 'lookups.th_code' | t }}</th> }
           <th>{{ 'lookups.th_name' | t }}</th>
           @if (activeTab().hasColor) { <th>{{ 'lookups.th_color' | t }}</th> }
           @if (activeTab().hasDescription) { <th>{{ 'lookups.th_description' | t }}</th> }
-          <th>{{ 'lookups.th_status' | t }}</th>
+          @if (activeTab().canSoftDelete) { <th>{{ 'lookups.th_status' | t }}</th> }
           <th></th>
         </tr>
       </thead>
@@ -66,8 +68,10 @@
           <tr><td [attr.colspan]="6" class="state">{{ 'common.no_results' | t }}</td></tr>
         } @else {
           @for (item of filteredItems(); track item.id) {
-            <tr [class.inactive]="!item.isActive">
-              <td><span class="code">{{ item.code }}</span></td>
+            <tr [class.inactive]="activeTab().canSoftDelete && !item.isActive">
+              @if (activeTab().hasCode) {
+                <td><span class="code">{{ item.code }}</span></td>
+              }
               <td>{{ item.name }}</td>
               @if (activeTab().hasColor) {
                 <td>
@@ -80,25 +84,29 @@
               @if (activeTab().hasDescription) {
                 <td class="desc-cell" [title]="item.description">{{ item.description || '—' }}</td>
               }
-              <td>
-                @if (item.isActive) {
-                  <span class="pill pill-active">{{ 'common.active' | t }}</span>
-                } @else {
-                  <span class="pill pill-inactive">{{ 'common.passive' | t }}</span>
-                }
-              </td>
+              @if (activeTab().canSoftDelete) {
+                <td>
+                  @if (item.isActive) {
+                    <span class="pill pill-active">{{ 'common.active' | t }}</span>
+                  } @else {
+                    <span class="pill pill-inactive">{{ 'common.passive' | t }}</span>
+                  }
+                </td>
+              }
               <td class="row-actions">
                 <button class="icon-btn" (click)="startEdit(item)" [title]="'common.edit' | t">
                   <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
                 </button>
-                @if (item.isActive) {
-                  <button class="icon-btn danger" (click)="askDelete(item)" [title]="'lookups.confirm_delete_btn' | t">
-                    <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
-                  </button>
-                } @else {
-                  <button class="icon-btn success" (click)="reactivate(item)" [title]="'common.reactivate' | t">
-                    <lucide-icon [img]="icons.Power" size="13"></lucide-icon>
-                  </button>
+                @if (activeTab().canSoftDelete) {
+                  @if (item.isActive) {
+                    <button class="icon-btn danger" (click)="askDelete(item)" [title]="'lookups.confirm_delete_btn' | t">
+                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                    </button>
+                  } @else {
+                    <button class="icon-btn success" (click)="reactivate(item)" [title]="'common.reactivate' | t">
+                      <lucide-icon [img]="icons.Power" size="13"></lucide-icon>
+                    </button>
+                  }
                 }
               </td>
             </tr>
@@ -122,20 +130,22 @@
       </header>
 
       <div class="modal-body">
-        <div class="field">
-          <label>{{ (m.mode === 'edit' ? 'lookups.field_code_immutable' : 'lookups.field_code_required') | t }}</label>
-          <input
-            type="text"
-            class="input"
-            [readonly]="m.mode === 'edit'"
-            [ngModel]="m.code"
-            (ngModelChange)="patchModal('code', ($event || '').toUpperCase())"
-            [placeholder]="'lookups.placeholder_code' | t"
-          />
-          @if (codeError()) {
-            <div class="error">{{ codeError() }}</div>
-          }
-        </div>
+        @if (activeTab().hasCode) {
+          <div class="field">
+            <label>{{ (m.mode === 'edit' ? 'lookups.field_code_immutable' : 'lookups.field_code_required') | t }}</label>
+            <input
+              type="text"
+              class="input"
+              [readonly]="m.mode === 'edit'"
+              [ngModel]="m.code"
+              (ngModelChange)="patchModal('code', ($event || '').toUpperCase())"
+              [placeholder]="'lookups.placeholder_code' | t"
+            />
+            @if (codeError()) {
+              <div class="error">{{ codeError() }}</div>
+            }
+          </div>
+        }
         <div class="field">
           <label>{{ 'lookups.field_name_required' | t }}</label>
           <input
@@ -145,6 +155,23 @@
             (ngModelChange)="patchModal('name', $event)"
           />
         </div>
+        @if (activeTab().hasParent) {
+          <div class="field">
+            <label>{{ 'lookups.field_parent_position' | t }}</label>
+            <select
+              class="input"
+              [ngModel]="m.parentPositionId"
+              (ngModelChange)="patchModal('parentPositionId', $event)"
+            >
+              <option [ngValue]="null">{{ 'lookups.parent_root' | t }}</option>
+              @for (p of positionsSvc.list(); track p.id) {
+                @if (p.id !== m.itemId) {
+                  <option [ngValue]="p.id">{{ p.name }}</option>
+                }
+              }
+            </select>
+          </div>
+        }
         @if (activeTab().hasDescription) {
           <div class="field">
             <label>{{ 'lookups.field_description' | t }}</label>

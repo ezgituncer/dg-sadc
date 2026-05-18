@@ -5,10 +5,11 @@ export interface CurrentUser {
   accountId: string;
   email: string;
   name: string;
-  position: string | null;
   isActive: boolean;
   roleId: number;
   roleCode: RoleCode;
+  positionId: number | null;
+  positionName: string | null;
   teamId: number | null;
   managerAccountId: string | null;
 }

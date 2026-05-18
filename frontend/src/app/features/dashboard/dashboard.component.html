@@ -59,7 +59,7 @@
               <div class="side-row">
                 <div class="side-info">
                   <div class="side-name">{{ u.name }}</div>
-                  <div class="side-meta">{{ u.position || u.email }}</div>
+                  <div class="side-meta">{{ u.positionName || u.email }}</div>
                 </div>
               </div>
             }
@@ -80,13 +80,8 @@
             @for (u of qaUsers(); track u.id) {
               <div class="side-row">
                 <div class="side-info">
-                  <div class="side-name">
-                    {{ u.name }}
-                    @if (u.roleCode === 'QA_SPECIALIST') {
-                      <span class="role-tag tag-pink">{{ 'dashboard.tag_qa_lead' | t }}</span>
-                    }
-                  </div>
-                  <div class="side-meta">{{ u.position || u.email }}</div>
+                  <div class="side-name">{{ u.name }}</div>
+                  <div class="side-meta">{{ u.positionName || u.email }}</div>
                 </div>
               </div>
             }
@@ -110,16 +105,13 @@
         <div class="org-info">
           <div class="org-name">{{ node.user.name }}</div>
           <div class="org-meta">
-            <span class="role-pill"
-                  [style.background]="roleColor(node.user.roleCode) + '24'"
-                  [style.color]="roleColor(node.user.roleCode)">{{ roleLabel(node.user.roleCode) }}</span>
+            @if (cardPositionLabel(node.user.positionName); as label) {
+              <span class="role-pill" [class]="cardPositionClass(node.user.positionName)">{{ label }}</span>
+            }
             @if (teamName(node.user.teamId)) {
               <span class="team-pill">{{ teamName(node.user.teamId) }}</span>
             }
           </div>
-          @if (node.user.position) {
-            <div class="org-position">{{ node.user.position }}</div>
-          }
         </div>
       </div>
 
@@ -132,10 +124,10 @@
           </div>
           <ul class="roster-list">
             @for (m of rosterReports(node); track m.user.accountId) {
-              <li class="roster-item" [class.is-tl]="m.user.roleCode === 'TECH_LEAD'">
-                <span class="roster-name" [title]="m.user.position || ''">{{ m.user.name }}</span>
-                @if (m.user.roleCode === 'TECH_LEAD') {
-                  <span class="role-tag tag-teal">{{ 'dashboard.tag_tl' | t }}</span>
+              <li class="roster-item" [title]="m.user.positionName || ''">
+                <span class="roster-name">{{ m.user.name }}</span>
+                @if (cardPositionLabel(m.user.positionName); as label) {
+                  <span class="role-pill" [class]="cardPositionClass(m.user.positionName)">{{ label }}</span>
                 }
               </li>
             }

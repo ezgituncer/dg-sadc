@@ -14,12 +14,17 @@ class User(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
-    position: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     role_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("roles.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    position_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("positions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
     )
     team_id: Mapped[int | None] = mapped_column(
         BigInteger,
@@ -34,6 +39,7 @@ class User(Base, TimestampMixin):
     )
 
     role = relationship("Role", lazy="joined")
+    position = relationship("Position", lazy="joined")
     team = relationship("Team", lazy="joined")
     manager = relationship(
         "User",

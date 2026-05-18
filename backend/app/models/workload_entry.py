@@ -44,10 +44,10 @@ class WorkloadEntry(Base, TimestampMixin):
         ForeignKey("projects.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    task_type_id: Mapped[int] = mapped_column(
+    task_type_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("task_types.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
 
     task_description: Mapped[str] = mapped_column(Text, nullable=False)
