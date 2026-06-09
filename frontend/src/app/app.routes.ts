@@ -24,6 +24,13 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
       {
+        path: 'my-workload',
+        loadComponent: () =>
+          import('./features/my-workload/my-workload.component').then(
+            (m) => m.MyWorkloadComponent,
+          ),
+      },
+      {
         path: 'workload-entry',
         loadComponent: () =>
           import('./features/workload-entry/workload-entry.component').then(

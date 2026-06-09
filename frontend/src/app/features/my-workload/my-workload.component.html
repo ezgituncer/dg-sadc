@@ -1,0 +1,161 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>{{ 'my_workload.title' | t }}</h1>
+      <p>{{ 'my_workload.subtitle' | t }}</p>
+    </div>
+  </header>
+
+  <!-- Month navigator -->
+  <section class="filter-bar">
+    <button class="nav-btn" type="button" (click)="prevMonth()" [attr.aria-label]="'my_workload.prev_month' | t">
+      <lucide-icon [img]="icons.ChevronLeft" size="16"></lucide-icon>
+    </button>
+
+    <select class="dropdown" [ngModel]="month()" (ngModelChange)="month.set($event)">
+      @for (m of monthOptions; track m.idx) {
+        <option [ngValue]="m.idx">{{ m.name }}</option>
+      }
+    </select>
+    <select class="dropdown" [ngModel]="year()" (ngModelChange)="year.set($event)">
+      @for (y of availableYears; track y) {
+        <option [ngValue]="y">{{ y }}</option>
+      }
+    </select>
+
+    <button class="nav-btn" type="button" (click)="nextMonth()" [attr.aria-label]="'my_workload.next_month' | t">
+      <lucide-icon [img]="icons.ChevronRight" size="16"></lucide-icon>
+    </button>
+  </section>
+
+  <!-- KPI cards -->
+  <section class="kpis">
+    <div class="kpi accent-teal">
+      <div class="kpi-label">{{ 'my_workload.kpi_expected' | t }}</div>
+      <div class="kpi-value">{{ expectedHours() }} <span>{{ 'common.hours' | t }}</span></div>
+      <div class="kpi-sub">{{ 'my_workload.kpi_expected_sub' | t : { days: expectedDays() } }}</div>
+    </div>
+    <div class="kpi accent-blue">
+      <div class="kpi-label">{{ 'my_workload.kpi_entered' | t }}</div>
+      <div class="kpi-value">{{ enteredHours() | number : '1.0-2' }} <span>{{ 'common.hours' | t }}</span></div>
+      <div class="kpi-sub">{{ 'my_workload.kpi_entered_sub' | t : { days: enteredDays() } }}</div>
+    </div>
+    <div class="kpi accent-purple">
+      <div class="kpi-label">{{ 'my_workload.kpi_fill' | t }}</div>
+      <div class="kpi-value">{{ fillPct() }}<span>%</span></div>
+      <div class="kpi-sub">{{ 'my_workload.kpi_fill_sub' | t }}</div>
+    </div>
+    <div class="kpi accent-amber">
+      <div class="kpi-label">{{ 'my_workload.kpi_missing' | t }}</div>
+      <div class="kpi-value">{{ missingDays() }} <span>{{ 'common.days' | t }}</span></div>
+      <div class="kpi-sub">{{ 'my_workload.kpi_missing_sub' | t }}</div>
+    </div>
+  </section>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="legend-label">{{ 'my_workload.legend_label' | t }}</span>
+    <span class="legend-item"><span class="swatch green"></span>{{ 'my_workload.legend_full' | t }}</span>
+    <span class="legend-item"><span class="swatch yellow"></span>{{ 'my_workload.legend_partial' | t }}</span>
+    <span class="legend-item"><span class="swatch red"></span>{{ 'my_workload.legend_missing' | t }}</span>
+    <span class="legend-item"><span class="swatch weekend"></span>{{ 'my_workload.legend_weekend' | t }}</span>
+    <span class="legend-item"><span class="swatch future"></span>{{ 'my_workload.legend_future' | t }}</span>
+  </div>
+
+  <!-- Calendar -->
+  <section class="cal-card">
+    @if (loading()) {
+      <div class="state">{{ 'common.loading' | t }}</div>
+    } @else {
+      <div class="cal-grid">
+        @for (label of weekdayLabels; track label) {
+          <div class="cal-weekday">{{ label }}</div>
+        }
+        @for (week of weeks(); track $index) {
+          @for (cell of week; track $index) {
+            @if (cell.tone === 'pad') {
+              <div class="cal-cell pad"></div>
+            } @else {
+              <div
+                class="cal-cell"
+                [ngClass]="cell.tone"
+                [class.today]="cell.isToday"
+                [class.selected]="selectedDate() === cell.date"
+                [class.clickable]="cell.hours > 0"
+                (click)="selectDay(cell)"
+              >
+                <div class="cal-top">
+                  <span class="cal-daynum">{{ cell.day }}</span>
+                  @if (cell.addable) {
+                    <button
+                      type="button"
+                      class="cal-add"
+                      (click)="addEntry(cell, $event)"
+                      [title]="'my_workload.add_entry' | t"
+                    >
+                      <lucide-icon [img]="icons.Plus" size="12"></lucide-icon>
+                    </button>
+                  }
+                </div>
+                @if (cell.hours > 0) {
+                  <span class="cal-hours">{{ cell.hours | number : '1.0-2' }}h</span>
+                } @else if (cell.tone === 'red') {
+                  <span class="cal-flag">
+                    <lucide-icon [img]="icons.AlertCircle" size="12"></lucide-icon>
+                  </span>
+                } @else {
+                  <span class="cal-dash">—</span>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    }
+  </section>
+
+  <!-- Selected-day detail -->
+  @if (selectedDate(); as date) {
+    <section class="detail-card">
+      <div class="detail-head">
+        <lucide-icon [img]="icons.Clock" size="14"></lucide-icon>
+        <span>{{ 'my_workload.day_detail_title' | t : { date: date } }}</span>
+      </div>
+      @if (selectedEntries().length === 0) {
+        <div class="detail-empty">{{ 'my_workload.day_detail_empty' | t }}</div>
+      } @else {
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>{{ 'workload_list.th_activity' | t }}</th>
+              <th>{{ 'workload_list.th_project' | t }}</th>
+              <th>{{ 'workload_list.th_category' | t }}</th>
+              <th>{{ 'workload_list.th_task_type' | t }}</th>
+              <th>{{ 'workload_list.th_description' | t }}</th>
+              <th>{{ 'workload_list.th_status' | t }}</th>
+              <th class="right">{{ 'workload_list.th_hours' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of selectedEntries(); track entry.id) {
+              <tr>
+                <td>{{ activityName(entry.activityTypeId) }}</td>
+                <td>{{ projectName(entry.projectId) }}</td>
+                <td>
+                  <span class="cat-cell">
+                    <span class="cat-dot" [style.background]="categoryFor(entry)?.color"></span>
+                    {{ categoryFor(entry)?.name || '—' }}
+                  </span>
+                </td>
+                <td>{{ taskTypeName(entry.taskTypeId) }}</td>
+                <td class="desc-cell" [title]="entry.taskDescription">{{ entry.taskDescription }}</td>
+                <td><span class="pill pill-{{ entry.status }}">{{ entry.status }}</span></td>
+                <td class="right hours-cell">{{ entry.hoursSpent }}h</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  }
+</div>

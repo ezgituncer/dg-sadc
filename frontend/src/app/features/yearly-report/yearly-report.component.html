@@ -202,19 +202,26 @@
                       [style.color]="toneStyle(toneFor(parseFloat(h), $index)).text"
                       [style.border]="'1px solid ' + toneStyle(toneFor(parseFloat(h), $index)).border"
                       [title]="trMonthsFull[$index] + ': ' + parseFloat(h).toFixed(1) + ' / ' + monthTargetHours($index) + 'h'">
-                    {{ parseFloat(h) > 0 ? parseFloat(h).toFixed(1) : '—' }}
+                    @if (parseFloat(h) > 0) {
+                      <span class="cell-pct">{{ monthPct(parseFloat(h), $index) }}%</span>
+                      <span class="cell-hours">({{ parseFloat(h).toFixed(1) }}h)</span>
+                    } @else {
+                      —
+                    }
                   </td>
                 }
                 <td class="total-cell"
                     [style.background]="toneStyle(yearTone(parseFloat(row.yearTotal))).bg"
                     [style.color]="toneStyle(yearTone(parseFloat(row.yearTotal))).text"
                     [style.border]="'1px solid ' + toneStyle(yearTone(parseFloat(row.yearTotal))).border">
-                  {{ parseFloat(row.yearTotal).toFixed(1) }}h
+                  <span class="cell-pct">{{ yearPct(parseFloat(row.yearTotal)) }}%</span>
+                  <span class="cell-hours">({{ parseFloat(row.yearTotal).toFixed(1) }}h)</span>
                 </td>
               </tr>
 
               @if (isExpanded(row.user.accountId) && includeBreakdown()) {
                 @for (entry of row.breakdownByActivity | keyvalue; track entry.key) {
+                  @if (showBreakdownRow(entry.value)) {
                   <tr class="breakdown-row">
                     <td class="sticky-left breakdown-name">
                       <span class="dot" [style.background]="activityColor(entry.key)"></span>
@@ -231,6 +238,7 @@
                       {{ entry.value.reduce(sumStringReducer, 0).toFixed(1) }}h
                     </td>
                   </tr>
+                  }
                 }
               }
             }

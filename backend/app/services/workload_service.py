@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.schemas.workload import WorkloadEntryCreate, WorkloadEntryUpdate
 
-EDIT_WINDOW_DAYS = 30
+EDIT_WINDOW_DAYS = 30  # noqa
 
 ALLOWED_SORT_COLUMNS = {
     "work_date": WorkloadEntry.work_date,
@@ -74,7 +74,7 @@ async def _validate_category_for_activity(
 async def list_entries(
     db: AsyncSession,
     *,
-    account_id: str | None = None,
+    account_id: str | list[str] | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     project_id: int | None = None,
@@ -89,14 +89,17 @@ async def list_entries(
     page_size: int = 50,
 ) -> tuple[list[WorkloadEntry], int]:
     page = max(1, page)
-    page_size = max(1, min(page_size, 200))
+    page_size = max(1, min(page_size, 5000))
 
     stmt = select(WorkloadEntry)
     count_stmt = select(func.count(WorkloadEntry.id))
 
     conditions = []
     if account_id:
-        conditions.append(WorkloadEntry.account_id == account_id)
+        if isinstance(account_id, list):
+            conditions.append(WorkloadEntry.account_id.in_(account_id))
+        else:
+            conditions.append(WorkloadEntry.account_id == account_id)
     if date_from:
         conditions.append(WorkloadEntry.work_date >= date_from)
     if date_to:
@@ -235,7 +238,7 @@ async def daily_total_hours(
 async def aggregates(
     db: AsyncSession,
     *,
-    account_id: str | None = None,
+    account_id: str | list[str] | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     project_id: int | None = None,
@@ -256,7 +259,10 @@ async def aggregates(
 
     base_conditions = []
     if account_id:
-        base_conditions.append(WorkloadEntry.account_id == account_id)
+        if isinstance(account_id, list):
+            base_conditions.append(WorkloadEntry.account_id.in_(account_id))
+        else:
+            base_conditions.append(WorkloadEntry.account_id == account_id)
     if date_from:
         base_conditions.append(WorkloadEntry.work_date >= date_from)
     if date_to:

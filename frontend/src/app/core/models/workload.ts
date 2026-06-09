@@ -66,7 +66,7 @@ export interface WorkloadAggregates {
 }
 
 export interface WorkloadEntryFilters {
-  accountId?: string;
+  accountId?: string[];
   dateFrom?: string;
   dateTo?: string;
   projectId?: number;

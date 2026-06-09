@@ -13,6 +13,7 @@ import {
   ClipboardList,
   FolderOpen,
   BarChart3,
+  CalendarDays,
   Users,
   Settings,
   LogOut,
@@ -64,6 +65,7 @@ const MENU_TREE: MenuEntry[] = [
     labelKey: 'nav.workload_group',
     icon: ClipboardList,
     children: [
+      { type: 'leaf', key: 'my-workload',    path: '/my-workload',    labelKey: 'nav.my_workload',    icon: CalendarDays },
       { type: 'leaf', key: 'workload-entry', path: '/workload-entry', labelKey: 'nav.workload_entry', icon: Plus },
       { type: 'leaf', key: 'workload-list',  path: '/workload-list',  labelKey: 'nav.workload_list',  icon: FolderOpen },
       { type: 'leaf', key: 'yearly-report',  path: '/yearly-report',  labelKey: 'nav.yearly_report',  icon: BarChart3, allow: ROLES_NOT_WORKER },

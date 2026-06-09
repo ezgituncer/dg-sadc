@@ -26,7 +26,7 @@ router = APIRouter(prefix="/workload-entries", tags=["workload"])
 
 @router.get("", response_model=WorkloadEntryListResponse)
 async def list_workload_entries(
-    account_id: str | None = Query(default=None),
+    account_id: list[str] | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     project_id: int | None = Query(default=None),
@@ -38,7 +38,7 @@ async def list_workload_entries(
     sort: str = Query(default="work_date"),
     direction: str = Query(default="desc"),
     page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=50, ge=1, le=200),
+    page_size: int = Query(default=50, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> WorkloadEntryListResponse:
@@ -68,7 +68,7 @@ async def list_workload_entries(
 
 @router.get("/export")
 async def export_workload_entries(
-    account_id: str | None = Query(default=None),
+    account_id: list[str] | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     project_id: int | None = Query(default=None),
@@ -142,7 +142,7 @@ async def export_workload_entries(
 
 @router.get("/aggregates", response_model=WorkloadAggregates)
 async def workload_aggregates(
-    account_id: str | None = Query(default=None),
+    account_id: list[str] | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     project_id: int | None = Query(default=None),

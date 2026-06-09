@@ -3,8 +3,11 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
+  HostListener,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,9 +21,11 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   PieChart as PieIcon,
   BarChart3,
+  Users as UsersIcon,
 } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
 import type { ChartConfiguration, ChartData } from 'chart.js';
@@ -46,7 +51,11 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+// Fetch the full filtered set in one request (server cap is 5000) so per-user
+// totals are complete and no records are hidden by server-side paging.
+const FETCH_ALL = 5000;
+// Frontend pagination is by person/group, not by entry.
+const GROUP_PAGE_SIZE = 25;
 
 @Component({
   selector: 'app-workload-list',
@@ -72,8 +81,8 @@ export class WorkloadListComponent {
   private readonly localeSvc = inject(LocaleService);
 
   readonly icons = {
-    Calendar, Search, Save, X, Edit2, Trash2, ChevronLeft, ChevronRight,
-    TrendingUp, PieIcon, BarChart3,
+    Calendar, Search, Save, X, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronDown,
+    TrendingUp, PieIcon, BarChart3, UsersIcon,
   };
 
   readonly today = isoToday();
@@ -81,7 +90,14 @@ export class WorkloadListComponent {
 
   readonly dateFrom = signal<string>(this.thirtyDaysAgo);
   readonly dateTo = signal<string>(this.today);
-  readonly accountIdFilter = signal<string>('');
+  // Multi-select: empty array means "all users".
+  readonly accountIdFilter = signal<string[]>([]);
+
+  // User picker popover state (mirrors the yearly-report picker).
+  readonly userPickerOpen = signal(false);
+  readonly userPickerFilter = signal('');
+  readonly userPickerPos = signal<{ top: number; left: number } | null>(null);
+  private readonly pickerTriggerRef = viewChild<ElementRef<HTMLButtonElement>>('pickerTrigger');
   readonly projectIdFilter = signal<number | null>(null);
   readonly activityTypeIdFilter = signal<number | null>(null);
   readonly taskTypeIdFilter = signal<number | null>(null);
@@ -90,7 +106,6 @@ export class WorkloadListComponent {
   readonly search = signal<string>('');
 
   readonly page = signal(1);
-  readonly pageSize = signal<number>(20);
   readonly sort = signal<SortConfig>({ key: 'work_date', direction: 'desc' });
 
   readonly entries = signal<WorkloadEntry[]>([]);
@@ -105,21 +120,150 @@ export class WorkloadListComponent {
   readonly currentUser = this.auth.currentUser;
   readonly isWorker = computed(() => this.auth.isWorker());
 
-  readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+  readonly groupPageSize = GROUP_PAGE_SIZE;
 
-  readonly totalPages = computed(() => {
-    const t = this.total();
-    const ps = this.pageSize();
-    return Math.max(1, Math.ceil(t / ps));
+  // --- Grouped-by-user view -------------------------------------------------
+  // The table groups the fetched entries by person: one main row per user with
+  // their total hours, expandable to reveal their individual workload entries.
+  readonly expandedUsers = signal<Set<string>>(new Set());
+
+  readonly groupedEntries = computed(() => {
+    const groups = new Map<
+      string,
+      { accountId: string; name: string; totalHours: number; entries: WorkloadEntry[] }
+    >();
+    for (const e of this.entries()) {
+      let g = groups.get(e.accountId);
+      if (!g) {
+        g = { accountId: e.accountId, name: this.users.nameFor(e.accountId), totalHours: 0, entries: [] };
+        groups.set(e.accountId, g);
+      }
+      g.totalHours += parseFloat(e.hoursSpent) || 0;
+      g.entries.push(e);
+    }
+    return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
   });
 
-  /** Directory users sorted alphabetically — populates the user filter dropdown.
-   *  Reading the directory signal keeps this reactive; it picks up the first time
-   *  the service finishes its lazy fetch in AppShell.ngOnInit. */
+  /** Expected hours for the selected date range = weekdays (Mon–Fri) × 8.
+   *  Company-wide target shown as the denominator in each person's total. */
+  readonly expectedHours = computed(() => {
+    const from = this.dateFrom();
+    const to = this.dateTo();
+    if (!from || !to) return 0;
+    const start = new Date(from + 'T00:00:00');
+    const end = new Date(to + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+    let workdays = 0;
+    const d = new Date(start);
+    while (d <= end) {
+      const day = d.getDay();
+      if (day !== 0 && day !== 6) workdays++;
+      d.setDate(d.getDate() + 1);
+    }
+    return workdays * 8;
+  });
+
+  toggleUser(accountId: string): void {
+    this.expandedUsers.update((s) => {
+      const next = new Set(s);
+      if (next.has(accountId)) next.delete(accountId);
+      else next.add(accountId);
+      return next;
+    });
+  }
+  isUserExpanded(accountId: string): boolean {
+    return this.expandedUsers().has(accountId);
+  }
+
+  // Pagination is over user groups, computed client-side from the full set.
+  readonly totalGroups = computed(() => this.groupedEntries().length);
+  readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.totalGroups() / this.groupPageSize)),
+  );
+  readonly pagedGroups = computed(() => {
+    const groups = this.groupedEntries();
+    const ps = this.groupPageSize;
+    const p = Math.min(this.page(), Math.max(1, Math.ceil(groups.length / ps)));
+    const start = (p - 1) * ps;
+    return groups.slice(start, start + ps);
+  });
+
+  /** Directory users (sorted, optionally filtered by the picker search box) —
+   *  populates the user multi-select. Reading the directory signal keeps this
+   *  reactive; it picks up the first time the service finishes its lazy fetch
+   *  in AppShell.ngOnInit. */
   readonly directoryUsers = computed(() => {
     const map = this.users.directory();
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    const items = Array.from(map.values());
+    const filter = this.userPickerFilter().trim().toLowerCase();
+    const filtered = filter
+      ? items.filter(
+          (u) =>
+            u.name.toLowerCase().includes(filter) ||
+            u.accountId.toLowerCase().includes(filter),
+        )
+      : items;
+    return filtered.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
   });
+
+  readonly selectedUserCount = computed(() => this.accountIdFilter().length);
+
+  userPickerLabel(): string {
+    const n = this.selectedUserCount();
+    if (n === 0) return this.localeSvc.t('workload_list.user_all');
+    if (n === 1) return this.localeSvc.t('workload_list.users_selected_one');
+    return this.localeSvc.t('workload_list.users_selected_many', { count: n });
+  }
+
+  toggleUserPicker(): void {
+    const next = !this.userPickerOpen();
+    this.userPickerOpen.set(next);
+    if (next) {
+      this.recomputePickerPosition();
+    } else {
+      this.userPickerFilter.set('');
+    }
+  }
+
+  closeUserPicker(): void {
+    this.userPickerOpen.set(false);
+    this.userPickerFilter.set('');
+  }
+
+  private recomputePickerPosition(): void {
+    const el = this.pickerTriggerRef()?.nativeElement;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const popoverWidth = 320;
+    const left = Math.max(
+      8,
+      Math.min(window.innerWidth - popoverWidth - 8, rect.right - popoverWidth),
+    );
+    this.userPickerPos.set({ top: rect.bottom + 6, left });
+  }
+
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  onWindowChange(): void {
+    if (!this.userPickerOpen()) return;
+    this.recomputePickerPosition();
+  }
+
+  toggleUserSelection(accountId: string): void {
+    this.accountIdFilter.update((arr) =>
+      arr.includes(accountId) ? arr.filter((id) => id !== accountId) : [...arr, accountId],
+    );
+    this.page.set(1);
+  }
+
+  isUserSelected(accountId: string): boolean {
+    return this.accountIdFilter().includes(accountId);
+  }
+
+  clearUserSelection(): void {
+    this.accountIdFilter.set([]);
+    this.page.set(1);
+  }
 
   // KPI cards driven by the aggregate endpoint (full filtered set, not just one page).
   readonly kpis = computed(() => {
@@ -249,7 +393,7 @@ export class WorkloadListComponent {
 
   readonly activeFilterCount = computed(() => {
     let n = 0;
-    if (this.accountIdFilter()) n++;
+    if (this.accountIdFilter().length > 0) n++;
     if (this.projectIdFilter() !== null) n++;
     if (this.activityTypeIdFilter() !== null) n++;
     if (this.taskTypeIdFilter() !== null) n++;
@@ -260,11 +404,13 @@ export class WorkloadListComponent {
   });
 
   constructor() {
-    // Reload whenever any filter, sort or page changes.
+    // Reload whenever any filter or sort changes. Pagination is client-side
+    // (over user groups), so page changes do NOT refetch — we always pull the
+    // full filtered set so per-user totals are complete.
     effect(() => {
-      // Touch every signal so the effect tracks them all.
+      const ids = this.accountIdFilter();
       const filters: WorkloadEntryFilters = {
-        accountId: this.accountIdFilter() || undefined,
+        accountId: ids.length > 0 ? ids : undefined,
         dateFrom: this.dateFrom() || undefined,
         dateTo: this.dateTo() || undefined,
         projectId: this.projectIdFilter() ?? undefined,
@@ -275,8 +421,8 @@ export class WorkloadListComponent {
         search: this.search().trim() || undefined,
         sort: this.sort().key,
         direction: this.sort().direction,
-        page: this.page(),
-        pageSize: this.pageSize(),
+        page: 1,
+        pageSize: FETCH_ALL,
       };
       this.fetch(filters);
     });
@@ -320,11 +466,6 @@ export class WorkloadListComponent {
     this.page.set(Math.max(1, Math.min(p, this.totalPages())));
   }
 
-  setPageSize(size: number): void {
-    this.pageSize.set(size);
-    this.page.set(1);
-  }
-
   presetToday(): void {
     this.dateFrom.set(this.today);
     this.dateTo.set(this.today);
@@ -342,7 +483,7 @@ export class WorkloadListComponent {
   }
 
   clearFilters(): void {
-    this.accountIdFilter.set('');
+    this.accountIdFilter.set([]);
     this.projectIdFilter.set(null);
     this.activityTypeIdFilter.set(null);
     this.taskTypeIdFilter.set(null);
@@ -355,8 +496,9 @@ export class WorkloadListComponent {
   }
 
   exportCsv(): void {
+    const ids = this.accountIdFilter();
     const filters: WorkloadEntryFilters = {
-      accountId: this.accountIdFilter() || undefined,
+      accountId: ids.length > 0 ? ids : undefined,
       dateFrom: this.dateFrom() || undefined,
       dateTo: this.dateTo() || undefined,
       projectId: this.projectIdFilter() ?? undefined,
@@ -417,14 +559,9 @@ export class WorkloadListComponent {
   }
 
   private refetch(): void {
-    // Bumping page within bounds re-triggers the effect.
-    const p = this.page();
-    this.page.set(p === 1 ? 1 : p);
-    // Force trigger by toggling
-    this.page.update((x) => x);
-    // Simpler: just call fetch directly.
+    const ids = this.accountIdFilter();
     this.fetch({
-      accountId: this.accountIdFilter() || undefined,
+      accountId: ids.length > 0 ? ids : undefined,
       dateFrom: this.dateFrom() || undefined,
       dateTo: this.dateTo() || undefined,
       projectId: this.projectIdFilter() ?? undefined,
@@ -435,8 +572,8 @@ export class WorkloadListComponent {
       search: this.search().trim() || undefined,
       sort: this.sort().key,
       direction: this.sort().direction,
-      page: this.page(),
-      pageSize: this.pageSize(),
+      page: 1,
+      pageSize: FETCH_ALL,
     });
   }
 

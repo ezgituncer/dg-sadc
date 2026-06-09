@@ -56,8 +56,16 @@ export class WorkloadService {
 
   private buildParams(filters: WorkloadEntryFilters): HttpParams {
     let params = new HttpParams();
+
+    // account_id is multi-valued — emit one query param per selected user so the
+    // backend can read it as `list[str]`.
+    if (filters.accountId && filters.accountId.length > 0) {
+      for (const id of filters.accountId) {
+        if (id) params = params.append('account_id', id);
+      }
+    }
+
     const map: Record<string, string | number | undefined> = {
-      account_id: filters.accountId,
       date_from: filters.dateFrom,
       date_to: filters.dateTo,
       project_id: filters.projectId,

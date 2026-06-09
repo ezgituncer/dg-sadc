@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import {
   LucideAngularModule,
   Calendar,
@@ -86,6 +87,7 @@ export class WorkloadEntryComponent {
   private readonly lookups = inject(LookupService);
   private readonly api = inject(WorkloadService);
   private readonly localeSvc = inject(LocaleService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly icons = {
     Calendar, AlertCircle, Edit2, Activity, Tag, FolderOpen, Layers,
@@ -162,6 +164,12 @@ export class WorkloadEntryComponent {
   });
 
   constructor() {
+    // Pre-select a day when navigated here with ?date=YYYY-MM-DD (e.g. from My Workload).
+    const qpDate = this.route.snapshot.queryParamMap.get('date');
+    if (qpDate && /^\d{4}-\d{2}-\d{2}$/.test(qpDate)) {
+      this.date.set(qpDate);
+    }
+
     // Refetch the day's entries whenever the date changes (or after a successful submit).
     effect(() => {
       const date = this.date();
@@ -280,7 +288,7 @@ export class WorkloadEntryComponent {
   private loadDayEntries(accountId: string, day: string): void {
     this.loading.set(true);
     this.api
-      .list({ accountId, dateFrom: day, dateTo: day, pageSize: 100 })
+      .list({ accountId: [accountId], dateFrom: day, dateTo: day, pageSize: 100 })
       .subscribe({
         next: (res) => {
           this.entries.set(res.items);

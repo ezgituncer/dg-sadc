@@ -258,6 +258,17 @@ td.total-cell {
   min-width: 60px;
 }
 
+/* Cell content: big percentage on top, hours (in parens) underneath. */
+.cell-pct {
+  display: block;
+  font-size: 14px; font-weight: 600; line-height: 1.1;
+}
+.cell-hours {
+  display: block;
+  font-size: 10px; font-weight: 400; opacity: 0.75; margin-top: 1px;
+}
+td.total-cell .cell-pct { font-size: 15px; }
+
 .breakdown-row {
   background: rgba(15, 31, 58, 0.45);
 }

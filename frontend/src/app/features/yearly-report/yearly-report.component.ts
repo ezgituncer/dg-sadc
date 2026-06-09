@@ -354,8 +354,28 @@ export class YearlyReportComponent {
     return this.expectedDays()[monthIdx] * 8;
   }
 
+  /** Fill percentage of a month cell relative to that month's target hours. */
+  monthPct(hours: number, monthIdx: number): number {
+    const target = this.monthTargetHours(monthIdx);
+    return target > 0 ? Math.round((hours / target) * 100) : 0;
+  }
+
+  /** Fill percentage of the year total relative to the full-year target hours. */
+  yearPct(yearTotal: number): number {
+    const target = this.yearTargetTotal();
+    return target > 0 ? Math.round((yearTotal / target) * 100) : 0;
+  }
+
   parseFloat(s: string): number {
     return parseFloat(s) || 0;
+  }
+
+  /** Whether an activity breakdown row should be shown.
+   *  When a project filter is active only Project entries carry hours
+   *  (Non-Project / Self-Imp have NULL project_id), so we hide the empty rows. */
+  showBreakdownRow(months: string[]): boolean {
+    if (this.projectFilter() === null) return true;
+    return months.reduce((acc, h) => acc + (parseFloat(h) || 0), 0) > 0;
   }
 
   activityColor(activityId: string): string {

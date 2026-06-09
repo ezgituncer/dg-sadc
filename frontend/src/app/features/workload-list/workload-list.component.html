@@ -102,18 +102,68 @@
         <option value="medium">{{ 'workload_entry.complexity_medium' | t }}</option>
         <option value="high">{{ 'workload_entry.complexity_high' | t }}</option>
       </select>
-      <select
-        class="dropdown user-dropdown"
-        [ngModel]="accountIdFilter()"
-        (ngModelChange)="accountIdFilter.set($event || ''); page.set(1)"
+      <button
+        #pickerTrigger
+        type="button"
+        class="user-picker-trigger"
+        [class.has-selection]="selectedUserCount() > 0"
+        (click)="$event.stopPropagation(); toggleUserPicker()"
       >
-        <option value="">{{ 'workload_list.user_all' | t }}</option>
-        @for (u of directoryUsers(); track u.accountId) {
-          <option [value]="u.accountId">{{ u.name }} ({{ u.accountId }})</option>
-        }
-      </select>
+        <lucide-icon [img]="icons.UsersIcon" size="13"></lucide-icon>
+        <span>{{ userPickerLabel() }}</span>
+        <span class="caret">▾</span>
+      </button>
     </div>
   </section>
+
+  <!-- User picker popover — rendered at the page root so it isn't trapped in the
+       filter-bar's `backdrop-filter` stacking context. position: fixed + viewport-anchored
+       coordinates computed from the trigger's getBoundingClientRect(). -->
+  @if (userPickerOpen()) {
+    <div class="user-picker-overlay" (click)="closeUserPicker()"></div>
+    @if (userPickerPos(); as pos) {
+      <div
+        class="user-picker-popover"
+        [style.top.px]="pos.top"
+        [style.left.px]="pos.left"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="user-picker-search">
+          <lucide-icon [img]="icons.Search" size="12" class="search-icon"></lucide-icon>
+          <input
+            type="text"
+            [ngModel]="userPickerFilter()"
+            (ngModelChange)="userPickerFilter.set($event)"
+            [placeholder]="'workload_list.users_search_placeholder' | t"
+            autofocus
+          />
+        </div>
+        <div class="user-picker-list">
+          @if (directoryUsers().length === 0) {
+            <div class="user-picker-empty">{{ 'workload_list.users_empty' | t }}</div>
+          } @else {
+            @for (u of directoryUsers(); track u.accountId) {
+              <label class="user-picker-item" [class.selected]="isUserSelected(u.accountId)">
+                <input
+                  type="checkbox"
+                  [checked]="isUserSelected(u.accountId)"
+                  (change)="toggleUserSelection(u.accountId)"
+                />
+                <span class="user-picker-name">{{ u.name }}</span>
+                <span class="user-picker-acc">{{ u.accountId }}</span>
+              </label>
+            }
+          }
+        </div>
+        @if (selectedUserCount() > 0) {
+          <button class="user-picker-clear" type="button" (click)="clearUserSelection()">
+            <lucide-icon [img]="icons.X" size="11"></lucide-icon>
+            {{ 'workload_list.users_clear' | t }}
+          </button>
+        }
+      </div>
+    }
+  }
 
   <!-- ============== KPI cards ============== -->
   <section class="kpis">
@@ -186,13 +236,14 @@
       <table>
         <thead>
           <tr>
+            <th class="toggle-col"></th>
+            <th>{{ 'workload_list.th_user' | t }}</th>
             <th class="sortable" (click)="toggleSort('work_date')">
               {{ 'workload_list.th_date' | t }}
               @if (sort().key === 'work_date') {
                 <span class="arrow">{{ sort().direction === 'asc' ? '▲' : '▼' }}</span>
               }
             </th>
-            <th>{{ 'workload_list.th_user' | t }}</th>
             <th>{{ 'workload_list.th_activity' | t }}</th>
             <th>{{ 'workload_list.th_project' | t }}</th>
             <th>{{ 'workload_list.th_category' | t }}</th>
@@ -211,68 +262,93 @@
         </thead>
         <tbody>
           @if (loading()) {
-            <tr><td colspan="11" class="loading">{{ 'common.loading' | t }}</td></tr>
+            <tr><td colspan="12" class="loading">{{ 'common.loading' | t }}</td></tr>
           } @else if (entries().length === 0) {
-            <tr><td colspan="11" class="empty">{{ 'common.no_results' | t }}</td></tr>
+            <tr><td colspan="12" class="empty">{{ 'common.no_results' | t }}</td></tr>
           } @else {
-            @for (entry of entries(); track entry.id) {
-              <tr>
-                <td>{{ entry.workDate }}</td>
+            @for (group of pagedGroups(); track group.accountId) {
+              <!-- Main row: one per person, total workload on the right -->
+              <tr class="group-row" [class.expanded]="isUserExpanded(group.accountId)"
+                  (click)="toggleUser(group.accountId)">
+                <td class="toggle-col">
+                  <button class="expand-btn" type="button"
+                          [class.active]="isUserExpanded(group.accountId)">
+                    <lucide-icon
+                      [img]="isUserExpanded(group.accountId) ? icons.ChevronDown : icons.ChevronRight"
+                      size="14"></lucide-icon>
+                  </button>
+                </td>
                 <td>
                   <div class="user-cell">
-                    <span class="user-name">{{ users.nameFor(entry.accountId) }}</span>
-                    <span class="acc-id">{{ entry.accountId }}</span>
+                    <span class="user-name">{{ group.name }}</span>
+                    <span class="acc-id">{{ group.accountId }}</span>
                   </div>
                 </td>
-                <td>{{ activityName(entry.activityTypeId) }}</td>
-                <td>{{ projectName(entry.projectId) }}</td>
-                <td>
-                  <span class="cat-cell">
-                    <span class="cat-dot" [style.background]="categoryFor(entry)?.color"></span>
-                    {{ categoryFor(entry)?.name || '—' }}
-                  </span>
+                <td colspan="8" class="group-summary">
+                  {{ 'workload_list.group_entry_count' | t : { count: group.entries.length } }}
                 </td>
-                <td>{{ taskTypeName(entry.taskTypeId) }}</td>
-                <td class="desc-cell" [title]="entry.taskDescription">{{ entry.taskDescription }}</td>
-                <td><span class="pill pill-{{ entry.status }}">{{ entry.status }}</span></td>
-                <td><span class="pill pill-c-{{ entry.complexity }}">{{ entry.complexity }}</span></td>
-                <td class="hours-cell">{{ entry.hoursSpent }}</td>
-                <td class="row-actions">
-                  @if (canEditEntry(entry)) {
-                    <button class="icon-btn danger" (click)="askDelete(entry.id)" [title]="'common.delete' | t">
-                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
-                    </button>
-                  }
+                <td class="hours-cell group-total">
+                  {{ group.totalHours | number : '1.0-2' }}h
+                  <span class="group-expected">/ {{ expectedHours() }}h</span>
                 </td>
+                <td></td>
               </tr>
+
+              <!-- Detail rows: the person's individual workload entries -->
+              @if (isUserExpanded(group.accountId)) {
+                @for (entry of group.entries; track entry.id) {
+                  <tr class="detail-row">
+                    <td class="toggle-col"></td>
+                    <td></td>
+                    <td>{{ entry.workDate }}</td>
+                    <td>{{ activityName(entry.activityTypeId) }}</td>
+                    <td>{{ projectName(entry.projectId) }}</td>
+                    <td>
+                      <span class="cat-cell">
+                        <span class="cat-dot" [style.background]="categoryFor(entry)?.color"></span>
+                        {{ categoryFor(entry)?.name || '—' }}
+                      </span>
+                    </td>
+                    <td>{{ taskTypeName(entry.taskTypeId) }}</td>
+                    <td class="desc-cell" [title]="entry.taskDescription">{{ entry.taskDescription }}</td>
+                    <td><span class="pill pill-{{ entry.status }}">{{ entry.status }}</span></td>
+                    <td><span class="pill pill-c-{{ entry.complexity }}">{{ entry.complexity }}</span></td>
+                    <td class="hours-cell">{{ entry.hoursSpent }}</td>
+                    <td class="row-actions">
+                      @if (canEditEntry(entry)) {
+                        <button class="icon-btn danger" (click)="askDelete(entry.id)" [title]="'common.delete' | t">
+                          <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              }
             }
           }
         </tbody>
       </table>
     </div>
 
-    <!-- ============== Pagination ============== -->
+    <!-- ============== Pagination (client-side, by person) ============== -->
     <div class="pagination">
-      <div class="page-size">
-        {{ 'workload_list.page_size_label' | t }}
-        @for (size of pageSizeOptions; track size) {
-          <button class="size-btn" [class.active]="pageSize() === size" (click)="setPageSize(size)">
-            {{ size }}
+      <div class="list-summary">
+        {{ 'workload_list.list_summary' | t : { users: totalGroups(), records: total() } }}
+      </div>
+      @if (totalPages() > 1) {
+        <div class="page-controls">
+          <button class="page-btn" [disabled]="page() === 1" (click)="setPage(page() - 1)">
+            <lucide-icon [img]="icons.ChevronLeft" size="13"></lucide-icon>
           </button>
-        }
-      </div>
-      <div class="page-controls">
-        <button class="page-btn" [disabled]="page() === 1" (click)="setPage(page() - 1)">
-          <lucide-icon [img]="icons.ChevronLeft" size="13"></lucide-icon>
-        </button>
-        @for (p of paginationWindow(); track p) {
-          <button class="page-btn" [class.active]="p === page()" (click)="setPage(p)">{{ p }}</button>
-        }
-        <button class="page-btn" [disabled]="page() === totalPages()" (click)="setPage(page() + 1)">
-          <lucide-icon [img]="icons.ChevronRight" size="13"></lucide-icon>
-        </button>
-        <span class="page-info">{{ 'workload_list.page_info' | t : { page: page(), total: totalPages(), count: total() } }}</span>
-      </div>
+          @for (p of paginationWindow(); track p) {
+            <button class="page-btn" [class.active]="p === page()" (click)="setPage(p)">{{ p }}</button>
+          }
+          <button class="page-btn" [disabled]="page() === totalPages()" (click)="setPage(page() + 1)">
+            <lucide-icon [img]="icons.ChevronRight" size="13"></lucide-icon>
+          </button>
+          <span class="page-info">{{ 'workload_list.page_info' | t : { page: page(), total: totalPages(), count: totalGroups() } }}</span>
+        </div>
+      }
     </div>
   </section>
 
