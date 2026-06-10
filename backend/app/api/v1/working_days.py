@@ -4,8 +4,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user, require_role
+from app.api.deps import require_permission
 from app.core.database import get_db
+from app.core.permissions import YEARLY_REPORT_MANAGE, YEARLY_REPORT_VIEW
 from app.models import User
 from app.schemas.working_day import WorkingDaysResponse, WorkingDaysUpdate
 from app.services import working_day_service
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/working-days", tags=["working-days"])
 async def get_working_days(
     year: int = Query(..., ge=2000, le=2100),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(YEARLY_REPORT_VIEW)),
 ) -> WorkingDaysResponse:
     months = await working_day_service.get_year(db, year)
     return WorkingDaysResponse(year=year, months=months)
@@ -28,7 +29,7 @@ async def update_working_days(
     payload: WorkingDaysUpdate,
     year: int = Query(..., ge=2000, le=2100),
     db: AsyncSession = Depends(get_db),
-    actor: User = Depends(require_role("ADMIN", "MANAGER", "TECH_LEAD", "QA_SPECIALIST")),
+    actor: User = Depends(require_permission(YEARLY_REPORT_MANAGE)),
 ) -> WorkingDaysResponse:
     try:
         months = await working_day_service.upsert_year(

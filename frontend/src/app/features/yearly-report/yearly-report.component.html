@@ -230,12 +230,18 @@
                     @for (h of entry.value; track $index) {
                       <td class="breakdown-cell"
                           [style.color]="parseFloat(h) > 0 ? activityColor(entry.key) : 'var(--c-text-muted)'">
-                        {{ parseFloat(h) > 0 ? parseFloat(h).toFixed(1) : '—' }}
+                        @if (parseFloat(h) > 0) {
+                          <span class="cell-pct">{{ monthPct(parseFloat(h), $index) }}%</span>
+                          <span class="cell-hours">({{ parseFloat(h).toFixed(1) }}h)</span>
+                        } @else {
+                          —
+                        }
                       </td>
                     }
                     <td class="breakdown-total"
                         [style.color]="activityColor(entry.key)">
-                      {{ entry.value.reduce(sumStringReducer, 0).toFixed(1) }}h
+                      <span class="cell-pct">{{ yearPct(entry.value.reduce(sumStringReducer, 0)) }}%</span>
+                      <span class="cell-hours">({{ entry.value.reduce(sumStringReducer, 0).toFixed(1) }}h)</span>
                     </td>
                   </tr>
                   }

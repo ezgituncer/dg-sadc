@@ -104,6 +104,8 @@ export class WorkloadListComponent {
   readonly statusFilter = signal<string>('');
   readonly complexityFilter = signal<string>('');
   readonly search = signal<string>('');
+  /** Client-side: show only users whose total hours are below the expected target. */
+  readonly belowExpectedOnly = signal(false);
 
   readonly page = signal(1);
   readonly sort = signal<SortConfig>({ key: 'work_date', direction: 'desc' });
@@ -175,13 +177,21 @@ export class WorkloadListComponent {
     return this.expandedUsers().has(accountId);
   }
 
+  /** Groups after the "below expected" client filter is applied. */
+  readonly visibleGroups = computed(() => {
+    const groups = this.groupedEntries();
+    if (!this.belowExpectedOnly()) return groups;
+    const expected = this.expectedHours();
+    return groups.filter((g) => g.totalHours < expected);
+  });
+
   // Pagination is over user groups, computed client-side from the full set.
-  readonly totalGroups = computed(() => this.groupedEntries().length);
+  readonly totalGroups = computed(() => this.visibleGroups().length);
   readonly totalPages = computed(() =>
     Math.max(1, Math.ceil(this.totalGroups() / this.groupPageSize)),
   );
   readonly pagedGroups = computed(() => {
-    const groups = this.groupedEntries();
+    const groups = this.visibleGroups();
     const ps = this.groupPageSize;
     const p = Math.min(this.page(), Math.max(1, Math.ceil(groups.length / ps)));
     const start = (p - 1) * ps;
@@ -400,8 +410,14 @@ export class WorkloadListComponent {
     if (this.statusFilter()) n++;
     if (this.complexityFilter()) n++;
     if (this.search().trim()) n++;
+    if (this.belowExpectedOnly()) n++;
     return n;
   });
+
+  toggleBelowExpected(): void {
+    this.belowExpectedOnly.update((v) => !v);
+    this.page.set(1);
+  }
 
   constructor() {
     // Reload whenever any filter or sort changes. Pagination is client-side
@@ -490,6 +506,7 @@ export class WorkloadListComponent {
     this.statusFilter.set('');
     this.complexityFilter.set('');
     this.search.set('');
+    this.belowExpectedOnly.set(false);
     this.dateFrom.set(this.thirtyDaysAgo);
     this.dateTo.set(this.today);
     this.page.set(1);

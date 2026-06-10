@@ -70,7 +70,7 @@ import { TranslatePipe } from '../../core/pipes/translate.pipe';
     .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
     .dialog {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: var(--c-surface); backdrop-filter: blur(30px);border: 1px solid var(--c-border-hover); border-radius: 10px;
+      background: var(--c-surface-solid); border: 1px solid var(--c-border-hover); border-radius: 10px;
       width: calc(100% - 40px); max-width: 540px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     }

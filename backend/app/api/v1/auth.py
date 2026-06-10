@@ -4,13 +4,14 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.core.security import create_access_token, verify_password
-from app.models import User
+from app.models import Role, User
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.user import UserOut
 
@@ -25,7 +26,11 @@ async def login(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
     user = (
-        await db.execute(select(User).where(User.email == payload.email.lower()))
+        await db.execute(
+            select(User)
+            .where(User.email == payload.email.lower())
+            .options(joinedload(User.role).selectinload(Role.permissions))
+        )
     ).scalar_one_or_none()
 
     # Always run verify_password (even when user is None) so the timing of a

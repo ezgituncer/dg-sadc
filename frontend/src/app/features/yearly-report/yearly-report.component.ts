@@ -110,7 +110,7 @@ export class YearlyReportComponent {
   readonly expandedRows = signal<Set<string>>(new Set());
 
   readonly canEditWorkingDays = computed(() =>
-    this.auth.hasRole('ADMIN', 'MANAGER', 'TECH_LEAD', 'QA_SPECIALIST'),
+    this.auth.hasPermission('yearly_report.manage'),
   );
 
   readonly yearTargetTotal = computed(() => {

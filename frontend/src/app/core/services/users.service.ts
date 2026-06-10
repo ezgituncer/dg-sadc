@@ -4,8 +4,11 @@ import { firstValueFrom, Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
+  Permission,
   Position,
   Role,
+  RoleCreatePayload,
+  RoleUpdatePayload,
   Team,
   UserCreatePayload,
   UserListItem,
@@ -107,9 +110,8 @@ export class UsersService {
 @Injectable({ providedIn: 'root' })
 export class RolesService {
   private readonly base = environment.apiUrl;
-  // Backed by /api/v1/roles. Codes are immutable in the backend (CLAUDE.md);
-  // the management screen edits name + description only and there is no
-  // create / delete endpoint.
+  // Backed by /api/v1/roles. Roles are permission collections, fully CRUD-able.
+  // The ADMIN role is a superuser; the seeded six are system roles (not deletable).
   private readonly _cache = signal<Role[]>([]);
   private loadPromise: Promise<Role[]> | null = null;
 
@@ -137,12 +139,39 @@ export class RolesService {
     return this.loadPromise;
   }
 
-  update(id: number, payload: { name?: string; description?: string | null }): Observable<Role> {
+  /** Force a reload (after create/update/delete) so every consumer's list stays fresh. */
+  refresh(): Promise<Role[]> {
+    this.loadPromise = null;
+    return this.load();
+  }
+
+  /** The full permission catalog (used by the role matrix UI). */
+  permissions(): Observable<Permission[]> {
+    return this.http.get<Permission[]>(`${this.base}/roles/permissions`);
+  }
+
+  create(payload: RoleCreatePayload): Observable<Role> {
+    return this.http.post<Role>(`${this.base}/roles`, payload).pipe(
+      tap((created) => this._cache.update((arr) => [...arr, created])),
+    );
+  }
+
+  update(id: number, payload: RoleUpdatePayload): Observable<Role> {
     return this.http.patch<Role>(`${this.base}/roles/${id}`, payload).pipe(
       tap((updated) => {
         this._cache.update((arr) => arr.map((r) => (r.id === updated.id ? updated : r)));
       }),
     );
+  }
+
+  remove(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/roles/${id}`).pipe(
+      tap(() => this._cache.update((arr) => arr.filter((r) => r.id !== id))),
+    );
+  }
+
+  usage(id: number): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.base}/roles/${id}/usage`);
   }
 }
 

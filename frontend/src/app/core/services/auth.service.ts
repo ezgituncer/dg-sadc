@@ -21,6 +21,11 @@ export class AuthService {
   readonly currentUser = this._currentUser.asReadonly();
   readonly isLoggedIn = computed(() => this._currentUser() !== null);
   readonly roleCode = computed<RoleCode | null>(() => this._currentUser()?.roleCode ?? null);
+  readonly isSuperuser = computed(() => this._currentUser()?.isSuperuser ?? false);
+  /** Effective permission set as a Set for O(1) lookups. */
+  readonly permissions = computed<Set<string>>(
+    () => new Set(this._currentUser()?.permissions ?? []),
+  );
 
   constructor(private readonly http: HttpClient, private readonly router: Router) {}
 
@@ -54,6 +59,13 @@ export class AuthService {
 
   isWorker(): boolean {
     return this.roleCode() === 'WORKER';
+  }
+
+  /** True if the user holds ANY of the given permission codes (superuser → always true). */
+  hasPermission(...codes: string[]): boolean {
+    if (this.isSuperuser()) return true;
+    const perms = this.permissions();
+    return codes.some((c) => perms.has(c));
   }
 
   refreshFromServer(): Observable<CurrentUser> {

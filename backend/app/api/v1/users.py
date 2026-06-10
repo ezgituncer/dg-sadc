@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user, require_role
+from app.api.deps import get_current_user, require_permission, require_superuser
 from app.core.database import get_db
+from app.core.permissions import USERS_MANAGE, USERS_VIEW
 from app.models import User
 from app.schemas.user import (
     PasswordResetRequest,
@@ -42,7 +43,7 @@ async def list_users(
     is_active: bool | None = Query(default=True),
     search: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_VIEW)),
 ) -> list[UserOut]:
     users = await user_service.list_users(
         db,
@@ -58,7 +59,7 @@ async def list_users(
 async def get_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_VIEW)),
 ) -> UserOut:
     user = await user_service.get_user(db, user_id)
     return UserOut.from_model(user)
@@ -68,7 +69,7 @@ async def get_user(
 async def create_user(
     payload: UserCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UserOut:
     user = await user_service.create_user(db, payload)
     await db.commit()
@@ -81,7 +82,7 @@ async def update_user(
     user_id: int,
     payload: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    actor: User = Depends(forbid_worker),
+    actor: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UserOut:
     user = await user_service.update_user(db, user_id, payload, actor=actor)
     await db.commit()
@@ -98,7 +99,7 @@ async def reset_password(
     user_id: int,
     payload: PasswordResetRequest,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role("ADMIN")),
+    _: User = Depends(require_superuser),
 ) -> Response:
     await user_service.reset_password(db, user_id, payload.new_password)
     await db.commit()
@@ -109,7 +110,7 @@ async def reset_password(
 async def soft_delete_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    actor: User = Depends(forbid_worker),
+    actor: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UserOut:
     user = await user_service.soft_delete_user(db, user_id, actor=actor)
     await db.commit()
@@ -120,7 +121,7 @@ async def soft_delete_user(
 async def activate_user(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UserOut:
     user = await user_service.activate_user(db, user_id)
     await db.commit()

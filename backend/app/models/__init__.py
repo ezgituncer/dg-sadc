@@ -1,6 +1,7 @@
 """SQLAlchemy models — importing this package registers every model on Base.metadata."""
 from app.models.activity_type import ActivityType
 from app.models.category import NonProjectCategory, ProjectCategory, SelfImpCategory
+from app.models.permission import Permission, role_permissions
 from app.models.position import Position
 from app.models.project import Project
 from app.models.role import Role
@@ -14,6 +15,7 @@ __all__ = [
     "ActivityType",
     "ExpectedWorkingDay",
     "NonProjectCategory",
+    "Permission",
     "Position",
     "Project",
     "ProjectCategory",
@@ -23,4 +25,5 @@ __all__ = [
     "Team",
     "User",
     "WorkloadEntry",
+    "role_permissions",
 ]

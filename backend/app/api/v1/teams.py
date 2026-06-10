@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
+from app.core.permissions import USERS_MANAGE
 from app.models import Team, User
 from app.schemas.lookup import UsageCount
 from app.schemas.team import TeamCreate, TeamOut, TeamUpdate
@@ -40,7 +41,7 @@ async def get_team(
 async def team_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UsageCount:
     stmt = select(func.count(User.id)).where(User.team_id == item_id)
     n = int((await db.execute(stmt)).scalar() or 0)
@@ -51,7 +52,7 @@ async def team_usage(
 async def create_team(
     payload: TeamCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Team:
     obj = await lookup_service.create_item(db, Team, payload)
     await db.commit()
@@ -63,7 +64,7 @@ async def update_team(
     item_id: int,
     payload: TeamUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Team:
     obj = await lookup_service.update_item(db, Team, item_id, payload)
     await db.commit()
@@ -74,7 +75,7 @@ async def update_team(
 async def soft_delete_team(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Team:
     obj = await lookup_service.soft_delete(db, Team, item_id)
     await db.commit()
@@ -85,7 +86,7 @@ async def soft_delete_team(
 async def activate_team(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Team:
     obj = await lookup_service.activate(db, Team, item_id)
     await db.commit()

@@ -102,16 +102,28 @@
         <option value="medium">{{ 'workload_entry.complexity_medium' | t }}</option>
         <option value="high">{{ 'workload_entry.complexity_high' | t }}</option>
       </select>
+      @if (!isWorker()) {
+        <button
+          #pickerTrigger
+          type="button"
+          class="user-picker-trigger"
+          [class.has-selection]="selectedUserCount() > 0"
+          (click)="$event.stopPropagation(); toggleUserPicker()"
+        >
+          <lucide-icon [img]="icons.UsersIcon" size="13"></lucide-icon>
+          <span>{{ userPickerLabel() }}</span>
+          <span class="caret">▾</span>
+        </button>
+      }
       <button
-        #pickerTrigger
         type="button"
-        class="user-picker-trigger"
-        [class.has-selection]="selectedUserCount() > 0"
-        (click)="$event.stopPropagation(); toggleUserPicker()"
+        class="toggle-filter"
+        [class.active]="belowExpectedOnly()"
+        (click)="toggleBelowExpected()"
+        [title]="'workload_list.below_expected_hint' | t"
       >
-        <lucide-icon [img]="icons.UsersIcon" size="13"></lucide-icon>
-        <span>{{ userPickerLabel() }}</span>
-        <span class="caret">▾</span>
+        <lucide-icon [img]="icons.TrendingUp" size="13"></lucide-icon>
+        <span>{{ 'workload_list.below_expected' | t }}</span>
       </button>
     </div>
   </section>

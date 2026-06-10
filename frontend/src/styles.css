@@ -6,6 +6,8 @@
   --c-surface: #0e1f3a4d;
   --c-surface-hover: #142847;
   --c-surface-deep: #000c16ad;
+  /* Opaque panel color for modals/dialogs/popovers (no see-through). */
+  --c-surface-solid: #0c1a30;
   --c-border: rgba(148, 163, 184, 0.12);
   --c-border-hover: rgba(45, 212, 191, 0.4);
   --c-border-focus: #5be49e;

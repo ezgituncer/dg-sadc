@@ -28,7 +28,7 @@ import {
 } from '../../core/services/lookup-crud.service';
 import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
-import { PositionsService, RolesService, TeamsService } from '../../core/services/users.service';
+import { PositionsService, TeamsService } from '../../core/services/users.service';
 import { ToastComponent } from '../../shared/components/toast.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
@@ -43,9 +43,9 @@ interface Tab {
   hasCode: boolean;
   /** Positions have a parent dropdown — none of the others do. */
   hasParent: boolean;
-  /** Roles cannot be created (code-immutable, permissions hardcoded). */
+  /** Whether new rows can be created from this tab. */
   canCreate: boolean;
-  /** Roles cannot be soft-deleted — no `is_active` column. */
+  /** Whether rows support soft-delete (have an `is_active` column). */
   canSoftDelete: boolean;
 }
 
@@ -57,7 +57,6 @@ const TABS: Tab[] = [
   { kind: 'self-imp-categories',     labelKey: 'lookups.tab_self_imp_categories',      hasColor: true,  hasDescription: false, hasCode: true,  hasParent: false, canCreate: true,  canSoftDelete: true  },
   { kind: 'teams',                   labelKey: 'lookups.tab_teams',                    hasColor: false, hasDescription: true,  hasCode: false, hasParent: false, canCreate: true,  canSoftDelete: true  },
   { kind: 'positions',               labelKey: 'lookups.tab_positions',                hasColor: false, hasDescription: true,  hasCode: false, hasParent: true,  canCreate: true,  canSoftDelete: true  },
-  { kind: 'roles',                   labelKey: 'lookups.tab_roles',                    hasColor: false, hasDescription: true,  hasCode: true,  hasParent: false, canCreate: false, canSoftDelete: false },
 ];
 
 const COLOR_PALETTE = [
@@ -95,7 +94,6 @@ export class LookupsComponent {
   private readonly api = inject(LookupCrudService);
   private readonly lookups = inject(LookupService);
   private readonly teamsSvc = inject(TeamsService);
-  private readonly rolesSvc = inject(RolesService);
   protected readonly positionsSvc = inject(PositionsService);
   private readonly localeSvc = inject(LocaleService);
 
@@ -157,7 +155,6 @@ export class LookupsComponent {
     // Refresh global caches so other pages (filters, dropdowns) see the change.
     this.lookups.loadAll().catch(() => {});
     if (kind === 'teams') this.teamsSvc.load().catch(() => {});
-    if (kind === 'roles') this.rolesSvc.load().catch(() => {});
     if (kind === 'positions') this.positionsSvc.load().catch(() => {});
   }
 

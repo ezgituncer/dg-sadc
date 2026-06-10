@@ -10,8 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
+from app.core.permissions import USERS_MANAGE
 from app.models import Position, User
 from app.schemas.lookup import UsageCount
 from app.schemas.position import PositionCreate, PositionOut, PositionUpdate
@@ -86,7 +87,7 @@ async def get_position(
 async def position_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> UsageCount:
     stmt = select(func.count(User.id)).where(User.position_id == item_id)
     n = int((await db.execute(stmt)).scalar() or 0)
@@ -97,7 +98,7 @@ async def position_usage(
 async def create_position(
     payload: PositionCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Position:
     # Unique name
     clash = (
@@ -121,7 +122,7 @@ async def update_position(
     item_id: int,
     payload: PositionUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Position:
     obj = await _get(db, item_id)
     data = payload.model_dump(exclude_unset=True)
@@ -155,7 +156,7 @@ async def update_position(
 async def soft_delete_position(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Position:
     obj = await _get(db, item_id)
     # Block deactivation if any active user holds this position — otherwise
@@ -185,7 +186,7 @@ async def soft_delete_position(
 async def activate_position(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(USERS_MANAGE)),
 ) -> Position:
     obj = await _get(db, item_id)
     obj.is_active = True

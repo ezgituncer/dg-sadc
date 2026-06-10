@@ -49,6 +49,8 @@ class UserOut(BaseModel):
     is_active: bool
     role_id: int
     role_code: str | None = None
+    is_superuser: bool = False
+    permissions: list[str] = []
     position_id: int | None
     position_name: str | None = None
     team_id: int | None
@@ -58,6 +60,22 @@ class UserOut(BaseModel):
 
     @classmethod
     def from_model(cls, user) -> "UserOut":
+        from sqlalchemy import inspect as sa_inspect
+
+        role = user.role
+        is_superuser = bool(role and role.is_superuser)
+        # Effective permission set the frontend uses for guards / menu filtering.
+        # Superusers implicitly hold every permission. Guard against a non-eager-
+        # loaded `permissions` relationship (e.g. after refresh in the users CRUD)
+        # so we never trigger an async lazy-load here.
+        if is_superuser:
+            from app.core.permissions import ALL_CODES
+
+            permissions = list(ALL_CODES)
+        elif role is not None and "permissions" not in sa_inspect(role).unloaded:
+            permissions = sorted(p.code for p in role.permissions)
+        else:
+            permissions = []
         return cls(
             id=user.id,
             account_id=user.account_id,
@@ -65,7 +83,9 @@ class UserOut(BaseModel):
             name=user.name,
             is_active=user.is_active,
             role_id=user.role_id,
-            role_code=user.role.code if user.role else None,
+            role_code=role.code if role else None,
+            is_superuser=is_superuser,
+            permissions=permissions,
             position_id=user.position_id,
             position_name=user.position.name if user.position else None,
             team_id=user.team_id,

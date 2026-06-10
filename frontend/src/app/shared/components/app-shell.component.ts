@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
+import { AuthService } from '../../core/services/auth.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { UsersService } from '../../core/services/users.service';
 import { AppHeaderComponent } from './app-header.component';
@@ -54,8 +55,13 @@ import { TopNavComponent } from './top-nav.component';
 export class AppShellComponent implements OnInit {
   private readonly lookups = inject(LookupService);
   private readonly users = inject(UsersService);
+  private readonly auth = inject(AuthService);
 
   ngOnInit(): void {
+    // Refresh the cached user from the server so freshly-added fields (e.g. RBAC
+    // permissions) are present for sessions that logged in before they existed.
+    this.auth.refreshFromServer().subscribe({ error: () => {} });
+
     if (!this.lookups.ready()) {
       this.lookups.loadAll().catch((err) => {
         console.error('Failed to load lookup data', err);

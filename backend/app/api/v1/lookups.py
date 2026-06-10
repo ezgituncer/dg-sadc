@@ -12,8 +12,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
+from app.core.permissions import LOOKUPS_MANAGE
 from app.models import (
     ActivityType,
     NonProjectCategory,
@@ -67,7 +68,7 @@ async def get_project(
 async def project_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> UsageCount:
     n = await lookup_service.count_usage_for_project(db, item_id)
     return UsageCount(count=n)
@@ -77,7 +78,7 @@ async def project_usage(
 async def create_project(
     payload: LookupCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> Project:
     obj = await lookup_service.create_item(db, Project, payload)
     await db.commit()
@@ -89,7 +90,7 @@ async def update_project(
     item_id: int,
     payload: LookupUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> Project:
     obj = await lookup_service.update_item(db, Project, item_id, payload)
     await db.commit()
@@ -100,7 +101,7 @@ async def update_project(
 async def soft_delete_project(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> Project:
     obj = await lookup_service.soft_delete(db, Project, item_id)
     await db.commit()
@@ -111,7 +112,7 @@ async def soft_delete_project(
 async def activate_project(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> Project:
     obj = await lookup_service.activate(db, Project, item_id)
     await db.commit()
@@ -148,7 +149,7 @@ async def get_activity_type(
 async def activity_type_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> UsageCount:
     n = await lookup_service.count_usage_for_activity_type(db, item_id)
     return UsageCount(count=n)
@@ -158,7 +159,7 @@ async def activity_type_usage(
 async def create_activity_type(
     payload: LookupCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> ActivityType:
     obj = await lookup_service.create_item(db, ActivityType, payload)
     await db.commit()
@@ -170,7 +171,7 @@ async def update_activity_type(
     item_id: int,
     payload: LookupUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> ActivityType:
     obj = await lookup_service.update_item(db, ActivityType, item_id, payload)
     await db.commit()
@@ -181,7 +182,7 @@ async def update_activity_type(
 async def soft_delete_activity_type(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> ActivityType:
     obj = await lookup_service.soft_delete(db, ActivityType, item_id)
     await db.commit()
@@ -192,7 +193,7 @@ async def soft_delete_activity_type(
 async def activate_activity_type(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> ActivityType:
     obj = await lookup_service.activate(db, ActivityType, item_id)
     await db.commit()
@@ -220,7 +221,7 @@ async def list_task_types(
 async def task_type_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> UsageCount:
     n = await lookup_service.count_usage_for_task_type(db, item_id)
     return UsageCount(count=n)
@@ -230,7 +231,7 @@ async def task_type_usage(
 async def create_task_type(
     payload: TaskTypeCreate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> TaskType:
     obj = await lookup_service.create_item(db, TaskType, payload)
     await db.commit()
@@ -242,7 +243,7 @@ async def update_task_type(
     item_id: int,
     payload: TaskTypeUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> TaskType:
     obj = await lookup_service.update_item(db, TaskType, item_id, payload)
     await db.commit()
@@ -253,7 +254,7 @@ async def update_task_type(
 async def soft_delete_task_type(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> TaskType:
     obj = await lookup_service.soft_delete(db, TaskType, item_id)
     await db.commit()
@@ -264,7 +265,7 @@ async def soft_delete_task_type(
 async def activate_task_type(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(LOOKUPS_MANAGE)),
 ) -> TaskType:
     obj = await lookup_service.activate(db, TaskType, item_id)
     await db.commit()
@@ -293,7 +294,7 @@ def _make_category_router(prefix: str, model, activity_type_id: int, tag: str) -
     async def _usage(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(forbid_worker),
+        _user: User = Depends(require_permission(LOOKUPS_MANAGE)),
     ):
         n = await lookup_service.count_usage_for_category(db, activity_type_id, item_id)
         return UsageCount(count=n)
@@ -302,7 +303,7 @@ def _make_category_router(prefix: str, model, activity_type_id: int, tag: str) -
     async def _create(
         payload: CategoryCreate,
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(forbid_worker),
+        _user: User = Depends(require_permission(LOOKUPS_MANAGE)),
     ):
         obj = await lookup_service.create_item(db, model, payload)
         await db.commit()
@@ -313,7 +314,7 @@ def _make_category_router(prefix: str, model, activity_type_id: int, tag: str) -
         item_id: int,
         payload: CategoryUpdate,
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(forbid_worker),
+        _user: User = Depends(require_permission(LOOKUPS_MANAGE)),
     ):
         obj = await lookup_service.update_item(db, model, item_id, payload)
         await db.commit()
@@ -323,7 +324,7 @@ def _make_category_router(prefix: str, model, activity_type_id: int, tag: str) -
     async def _delete(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(forbid_worker),
+        _user: User = Depends(require_permission(LOOKUPS_MANAGE)),
     ):
         obj = await lookup_service.soft_delete(db, model, item_id)
         await db.commit()
@@ -333,7 +334,7 @@ def _make_category_router(prefix: str, model, activity_type_id: int, tag: str) -
     async def _activate(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        _user: User = Depends(forbid_worker),
+        _user: User = Depends(require_permission(LOOKUPS_MANAGE)),
     ):
         obj = await lookup_service.activate(db, model, item_id)
         await db.commit()

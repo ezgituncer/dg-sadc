@@ -92,7 +92,8 @@ export class UsersComponent {
   readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight, Plus };
 
   readonly currentUser = this.auth.currentUser;
-  readonly isAdmin = computed(() => this.auth.hasRole('ADMIN'));
+  // Password reset is superuser-only (matches the backend's require_superuser).
+  readonly isAdmin = computed(() => this.auth.isSuperuser());
 
   // --- filters ---
   readonly roleFilter = signal<number | null>(null);

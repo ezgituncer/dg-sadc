@@ -1,20 +1,24 @@
-"""Roles — read-only listing + edit of name/description.
+"""Roles — full CRUD + permission assignment.
 
-The `code` column is bound to permission checks in code, so it is intentionally
-immutable here. New roles cannot be added through the API and existing roles
-cannot be deleted — see CLAUDE.md "Roles (fixed, code immutable)".
+Roles are collections of permissions (app.core.permissions catalog). Listing /
+reading is open to any authenticated user (the user form needs the role dropdown);
+creating, editing and deleting require the ``roles.manage`` permission. The ADMIN
+role is a superuser and the six seeded roles are system roles (cannot be deleted).
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker, get_current_user
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
-from app.models import Role, User
+from app.core.permissions import ROLES_MANAGE
+from app.models import Permission, User
 from app.schemas.lookup import UsageCount
-from app.schemas.role import RoleOut, RoleUpdate
+from app.schemas.permission import PermissionOut
+from app.schemas.role import RoleCreate, RoleOut, RoleUpdate
+from app.services import role_service
 
 router = APIRouter(prefix="/roles", tags=["roles"])
 
@@ -23,8 +27,20 @@ router = APIRouter(prefix="/roles", tags=["roles"])
 async def list_roles(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> list[Role]:
-    rows = (await db.execute(select(Role).order_by(Role.id))).scalars().all()
+) -> list[RoleOut]:
+    roles = await role_service.list_roles(db)
+    return [RoleOut.from_model(r) for r in roles]
+
+
+@router.get("/permissions", response_model=list[PermissionOut])
+async def list_permissions(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[Permission]:
+    """The full permission catalog (grouped by feature on the client)."""
+    rows = (
+        await db.execute(select(Permission).order_by(Permission.feature, Permission.kind))
+    ).scalars().all()
     return list(rows)
 
 
@@ -33,24 +49,28 @@ async def get_role(
     item_id: int,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> Role:
-    obj = (
-        await db.execute(select(Role).where(Role.id == item_id))
-    ).scalar_one_or_none()
-    if obj is None:
-        raise HTTPException(status_code=404, detail="Role not found")
-    return obj
+) -> RoleOut:
+    role = await role_service.get_role(db, item_id)
+    return RoleOut.from_model(role)
 
 
 @router.get("/{item_id}/usage", response_model=UsageCount)
 async def role_usage(
     item_id: int,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(ROLES_MANAGE)),
 ) -> UsageCount:
-    stmt = select(func.count(User.id)).where(User.role_id == item_id)
-    n = int((await db.execute(stmt)).scalar() or 0)
-    return UsageCount(count=n)
+    return UsageCount(count=await role_service.role_usage(db, item_id))
+
+
+@router.post("", response_model=RoleOut, status_code=status.HTTP_201_CREATED)
+async def create_role(
+    payload: RoleCreate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission(ROLES_MANAGE)),
+) -> RoleOut:
+    role = await role_service.create_role(db, payload)
+    return RoleOut.from_model(role)
 
 
 @router.patch("/{item_id}", response_model=RoleOut)
@@ -58,17 +78,17 @@ async def update_role(
     item_id: int,
     payload: RoleUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
-) -> Role:
-    obj = (
-        await db.execute(select(Role).where(Role.id == item_id))
-    ).scalar_one_or_none()
-    if obj is None:
-        raise HTTPException(status_code=404, detail="Role not found")
-    data = payload.model_dump(exclude_unset=True)
-    for field, value in data.items():
-        setattr(obj, field, value)
-    await db.flush()
-    await db.commit()
-    await db.refresh(obj)
-    return obj
+    _: User = Depends(require_permission(ROLES_MANAGE)),
+) -> RoleOut:
+    role = await role_service.update_role(db, item_id, payload)
+    return RoleOut.from_model(role)
+
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+async def delete_role(
+    item_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_permission(ROLES_MANAGE)),
+) -> Response:
+    await role_service.delete_role(db, item_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

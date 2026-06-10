@@ -1,9 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
-import { roleGuard } from './core/guards/role.guard';
-
-const ROLES_NOT_WORKER = roleGuard('ADMIN', 'HR', 'MANAGER', 'TECH_LEAD', 'QA_SPECIALIST');
+import { permissionGuard } from './core/guards/permission.guard';
 
 export const routes: Routes = [
   {
@@ -46,7 +44,7 @@ export const routes: Routes = [
       },
       {
         path: 'yearly-report',
-        canActivate: [ROLES_NOT_WORKER],
+        canActivate: [permissionGuard('yearly_report.view')],
         loadComponent: () =>
           import('./features/yearly-report/yearly-report.component').then(
             (m) => m.YearlyReportComponent,
@@ -54,15 +52,21 @@ export const routes: Routes = [
       },
       {
         path: 'users',
-        canActivate: [ROLES_NOT_WORKER],
+        canActivate: [permissionGuard('users.view')],
         loadComponent: () =>
           import('./features/users/users.component').then((m) => m.UsersComponent),
       },
       {
         path: 'lookups',
-        canActivate: [ROLES_NOT_WORKER],
+        canActivate: [permissionGuard('lookups.view')],
         loadComponent: () =>
           import('./features/lookups/lookups.component').then((m) => m.LookupsComponent),
+      },
+      {
+        path: 'roles',
+        canActivate: [permissionGuard('roles.view', 'roles.manage')],
+        loadComponent: () =>
+          import('./features/roles/roles.component').then((m) => m.RolesComponent),
       },
     ],
   },

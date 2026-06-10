@@ -86,6 +86,21 @@
 }
 .user-picker-trigger .caret { margin-left: auto; font-size: 10px; color: var(--c-text-muted); }
 
+/* Below-expected toggle filter */
+.toggle-filter {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px; background: var(--c-bg);
+  border: 1px solid var(--c-border); border-radius: 6px;
+  color: var(--c-text-secondary); font-size: 12px; cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.toggle-filter:hover { border-color: var(--c-border-hover); }
+.toggle-filter.active {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--c-red);
+}
+
 .user-picker-overlay {
   position: fixed; inset: 0; z-index: 1000;
 }
@@ -94,8 +109,7 @@
   position: fixed;
   z-index: 1001;
   width: 320px; max-height: 380px;
-  background: var(--c-surface);
-  backdrop-filter: blur(30px);
+  background: var(--c-surface-solid);
   border: 1px solid var(--c-border-hover);
   border-radius: 8px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);

@@ -40,8 +40,11 @@ async def list_workload_entries(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> WorkloadEntryListResponse:
+    # Workers may only ever see their own entries, regardless of the filter sent.
+    if current.role and current.role.code == "WORKER":
+        account_id = [current.account_id]
     items, total = await workload_service.list_entries(
         db,
         account_id=account_id,
@@ -78,8 +81,11 @@ async def export_workload_entries(
     complexity: str | None = Query(default=None),
     search: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ):
+    # Workers may only export their own entries.
+    if current.role and current.role.code == "WORKER":
+        account_id = [current.account_id]
     # Pull everything in one shot — capped at 5000 rows for sanity.
     items, _total = await workload_service.list_entries(
         db,
@@ -152,8 +158,11 @@ async def workload_aggregates(
     complexity: str | None = Query(default=None),
     search: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current: User = Depends(get_current_user),
 ) -> WorkloadAggregates:
+    # Workers' KPIs/charts reflect only their own entries.
+    if current.role and current.role.code == "WORKER":
+        account_id = [current.account_id]
     data = await workload_service.aggregates(
         db,
         account_id=account_id,

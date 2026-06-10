@@ -16,6 +16,7 @@ import {
   CalendarDays,
   Users,
   Settings,
+  ShieldCheck,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -35,8 +36,8 @@ interface MenuLeaf {
   path: string;
   labelKey: string;
   icon: LucideIconData;
-  /** Roles that may see this leaf. Undefined = everyone authenticated. */
-  allow?: RoleCode[];
+  /** Permission codes; the leaf shows if the user holds ANY. Undefined = everyone. */
+  perms?: string[];
 }
 
 interface MenuGroup {
@@ -48,8 +49,6 @@ interface MenuGroup {
 }
 
 type MenuEntry = MenuLeaf | MenuGroup;
-
-const ROLES_NOT_WORKER: RoleCode[] = ['ADMIN', 'HR', 'MANAGER', 'TECH_LEAD', 'QA_SPECIALIST'];
 
 const MENU_TREE: MenuEntry[] = [
   {
@@ -68,7 +67,7 @@ const MENU_TREE: MenuEntry[] = [
       { type: 'leaf', key: 'my-workload',    path: '/my-workload',    labelKey: 'nav.my_workload',    icon: CalendarDays },
       { type: 'leaf', key: 'workload-entry', path: '/workload-entry', labelKey: 'nav.workload_entry', icon: Plus },
       { type: 'leaf', key: 'workload-list',  path: '/workload-list',  labelKey: 'nav.workload_list',  icon: FolderOpen },
-      { type: 'leaf', key: 'yearly-report',  path: '/yearly-report',  labelKey: 'nav.yearly_report',  icon: BarChart3, allow: ROLES_NOT_WORKER },
+      { type: 'leaf', key: 'yearly-report',  path: '/yearly-report',  labelKey: 'nav.yearly_report',  icon: BarChart3, perms: ['yearly_report.view'] },
     ],
   },
   {
@@ -77,8 +76,9 @@ const MENU_TREE: MenuEntry[] = [
     labelKey: 'nav.management_group',
     icon: Settings,
     children: [
-      { type: 'leaf', key: 'lookups', path: '/lookups', labelKey: 'nav.lookups', icon: Settings, allow: ROLES_NOT_WORKER },
-      { type: 'leaf', key: 'users',   path: '/users',   labelKey: 'nav.users',   icon: Users,    allow: ROLES_NOT_WORKER },
+      { type: 'leaf', key: 'lookups', path: '/lookups', labelKey: 'nav.lookups', icon: Settings,     perms: ['lookups.view'] },
+      { type: 'leaf', key: 'users',   path: '/users',   labelKey: 'nav.users',   icon: Users,        perms: ['users.view'] },
+      { type: 'leaf', key: 'roles',   path: '/roles',   labelKey: 'nav.roles',   icon: ShieldCheck,  perms: ['roles.view', 'roles.manage'] },
     ],
   },
 ];
@@ -151,7 +151,10 @@ export class TopNavComponent {
   readonly menu = computed<MenuEntry[]>(() => {
     const role = this.authService.roleCode();
     if (!role) return [];
-    const filterLeaf = (l: MenuLeaf): boolean => !l.allow || l.allow.includes(role);
+    // Touch the permissions signal so the menu recomputes when they change.
+    this.authService.permissions();
+    const filterLeaf = (l: MenuLeaf): boolean =>
+      !l.perms || this.authService.hasPermission(...l.perms);
     const out: MenuEntry[] = [];
     for (const e of MENU_TREE) {
       if (e.type === 'leaf') {

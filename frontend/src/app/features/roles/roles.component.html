@@ -1,0 +1,169 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>{{ 'roles.title' | t }}</h1>
+      <p>{{ 'roles.subtitle' | t }}</p>
+    </div>
+    @if (canManage()) {
+      <button class="btn-primary" type="button" (click)="startCreate()">
+        <lucide-icon [img]="icons.Plus" size="14"></lucide-icon>
+        {{ 'roles.new_role' | t }}
+      </button>
+    }
+  </header>
+
+  <div class="layout">
+    <!-- ===== Role list ===== -->
+    <section class="list-card">
+      @if (loading()) {
+        <div class="state">{{ 'common.loading' | t }}</div>
+      } @else {
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 'roles.th_role' | t }}</th>
+              <th>{{ 'roles.th_permissions' | t }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (role of roles(); track role.id) {
+              <tr [class.active]="editingId() === role.id" (click)="startEdit(role)">
+                <td>
+                  <div class="role-name">
+                    <lucide-icon [img]="icons.ShieldCheck" size="14"></lucide-icon>
+                    <span>{{ role.name }}</span>
+                    @if (role.isSuperuser) {
+                      <span class="tag tag-super">{{ 'roles.tag_superuser' | t }}</span>
+                    } @else if (role.isSystem) {
+                      <span class="tag tag-system">{{ 'roles.tag_system' | t }}</span>
+                    }
+                  </div>
+                  <div class="role-code">{{ role.code }}</div>
+                </td>
+                <td class="perm-count">
+                  @if (role.isSuperuser) {
+                    {{ 'roles.all_permissions' | t }}
+                  } @else {
+                    {{ 'roles.perm_count' | t : { count: permCount(role) } }}
+                  }
+                </td>
+                <td class="row-actions">
+                  @if (canManage() && !role.isSystem) {
+                    <button class="icon-btn danger" type="button"
+                            (click)="$event.stopPropagation(); askDelete(role)"
+                            [title]="'common.delete' | t">
+                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                    </button>
+                  } @else {
+                    <lucide-icon [img]="icons.Lock" size="12" class="lock-hint"
+                                 [title]="'roles.system_locked' | t"></lucide-icon>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <!-- ===== Editor ===== -->
+    @if (editingId() !== null) {
+      <section class="editor-card">
+        <div class="editor-head">
+          <span>{{ (editingId() === 0 ? 'roles.create_title' : 'roles.edit_title') | t }}</span>
+          <button class="x" type="button" (click)="closeEditor()" [attr.aria-label]="'common.close' | t">
+            <lucide-icon [img]="icons.X" size="14"></lucide-icon>
+          </button>
+        </div>
+
+        <div class="editor-body">
+          <div class="field">
+            <label>{{ 'roles.field_name' | t }} *</label>
+            <input
+              type="text"
+              class="input"
+              [ngModel]="formName()"
+              (ngModelChange)="formName.set($event)"
+              [disabled]="!canManage()"
+              [placeholder]="'roles.placeholder_name' | t"
+            />
+          </div>
+          <div class="field">
+            <label>{{ 'roles.field_description' | t }}</label>
+            <input
+              type="text"
+              class="input"
+              [ngModel]="formDescription()"
+              (ngModelChange)="formDescription.set($event)"
+              [disabled]="!canManage()"
+              [placeholder]="'roles.placeholder_description' | t"
+            />
+          </div>
+
+          @if (editorLocked()) {
+            <div class="locked-note">
+              <lucide-icon [img]="icons.Lock" size="13"></lucide-icon>
+              {{ 'roles.superuser_note' | t }}
+            </div>
+          }
+
+          <div class="matrix">
+            <div class="matrix-head">
+              <span>{{ 'roles.col_feature' | t }}</span>
+              <span class="center">{{ 'roles.col_view' | t }}</span>
+              <span class="center">{{ 'roles.col_manage' | t }}</span>
+            </div>
+            @for (row of featureRows(); track row.feature) {
+              <div class="matrix-row">
+                <span class="feat-label">{{ row.label }}</span>
+                <span class="center">
+                  @if (row.viewCode) {
+                    <input type="checkbox"
+                           [checked]="isPermSelected(row.viewCode)"
+                           [disabled]="editorLocked() || !canManage()"
+                           (change)="togglePerm(row.viewCode)" />
+                  } @else { — }
+                </span>
+                <span class="center">
+                  @if (row.manageCode) {
+                    <input type="checkbox"
+                           [checked]="isPermSelected(row.manageCode)"
+                           [disabled]="editorLocked() || !canManage()"
+                           (change)="togglePerm(row.manageCode)" />
+                  } @else { — }
+                </span>
+              </div>
+            }
+          </div>
+          <p class="matrix-hint">{{ 'roles.matrix_hint' | t }}</p>
+        </div>
+
+        @if (canManage()) {
+          <div class="editor-foot">
+            <button class="btn-secondary" type="button" (click)="closeEditor()">{{ 'common.cancel' | t }}</button>
+            <button class="btn-primary" type="button" [disabled]="!isFormValid() || saving()" (click)="save()">
+              <lucide-icon [img]="icons.Save" size="14"></lucide-icon>
+              {{ 'common.save' | t }}
+            </button>
+          </div>
+        }
+      </section>
+    }
+  </div>
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDeleteId() !== null) {
+    <app-confirm-dialog
+      [title]="'roles.confirm_delete_title' | t"
+      [message]="'roles.confirm_delete_msg' | t"
+      [confirmLabel]="'common.delete' | t"
+      [danger]="true"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    />
+  }
+</div>

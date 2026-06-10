@@ -4,8 +4,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import forbid_worker
+from app.api.deps import require_permission
 from app.core.database import get_db
+from app.core.permissions import YEARLY_REPORT_VIEW
 from app.models import User
 from app.schemas.report import YearlyReport
 from app.services import report_service
@@ -21,7 +22,7 @@ async def yearly_report(
     search: str | None = Query(default=None),
     include_breakdown: bool = Query(default=True),
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(forbid_worker),
+    _: User = Depends(require_permission(YEARLY_REPORT_VIEW)),
 ) -> YearlyReport:
     return await report_service.build_yearly_report(
         db,

@@ -32,7 +32,31 @@ export interface Role {
   code: string;
   name: string;
   description: string | null;
+  isSuperuser: boolean;
+  isSystem: boolean;
+  permissions: string[];
   createdAt: string;
+}
+
+export interface Permission {
+  id: number;
+  code: string;
+  name: string;
+  feature: string;
+  kind: 'view' | 'manage';
+  description: string | null;
+}
+
+export interface RoleCreatePayload {
+  name: string;
+  description?: string | null;
+  permissions: string[];
+}
+
+export interface RoleUpdatePayload {
+  name?: string;
+  description?: string | null;
+  permissions?: string[];
 }
 
 export interface Team {
