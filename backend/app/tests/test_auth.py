@@ -9,7 +9,7 @@ from app.tests.conftest import auth, login_token
 async def test_login_with_correct_credentials_returns_token(client: AsyncClient) -> None:
     res = await client.post(
         "/api/v1/auth/login",
-        json={"email": "admin@company.com", "password": "admin123"},
+        json={"account_id": "ADM001", "password": "admin123"},
     )
     assert res.status_code == 200
     body = res.json()
@@ -23,23 +23,23 @@ async def test_login_with_correct_credentials_returns_token(client: AsyncClient)
 async def test_login_wrong_password_returns_401(client: AsyncClient) -> None:
     res = await client.post(
         "/api/v1/auth/login",
-        json={"email": "admin@company.com", "password": "WRONG"},
+        json={"account_id": "ADM001", "password": "WRONG"},
     )
     assert res.status_code == 401
 
 
 @pytest.mark.asyncio
-async def test_login_unknown_email_returns_401(client: AsyncClient) -> None:
+async def test_login_unknown_account_returns_401(client: AsyncClient) -> None:
     res = await client.post(
         "/api/v1/auth/login",
-        json={"email": "nobody@company.com", "password": "anything"},
+        json={"account_id": "NOBODY", "password": "anything"},
     )
     assert res.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_login_inactive_user_returns_401(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     # Find EMP001's id via the API.
     users_res = await client.get("/api/v1/users", headers=auth(admin))
     user_id = next(u["id"] for u in users_res.json() if u["account_id"] == "EMP001")
@@ -49,7 +49,7 @@ async def test_login_inactive_user_returns_401(client: AsyncClient) -> None:
 
     res = await client.post(
         "/api/v1/auth/login",
-        json={"email": "developer1@company.com", "password": "pass123"},
+        json={"account_id": "EMP001", "password": "pass123"},
     )
     assert res.status_code == 401
 
@@ -62,7 +62,7 @@ async def test_me_requires_token(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_me_returns_user(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/auth/me", headers=auth(token))
     assert res.status_code == 200
     body = res.json()

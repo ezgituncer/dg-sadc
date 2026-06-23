@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, require_permission, require_superuser
+from app.api.deps import get_current_user, require_permission
 from app.core.database import get_db
 from app.core.permissions import USERS_MANAGE, USERS_VIEW
 from app.models import User
@@ -99,9 +99,10 @@ async def reset_password(
     user_id: int,
     payload: PasswordResetRequest,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_superuser),
+    actor: User = Depends(get_current_user),
 ) -> Response:
-    await user_service.reset_password(db, user_id, payload.new_password)
+    # Superusers reset anyone; managers may reset users who report to them.
+    await user_service.reset_password(db, user_id, payload.new_password, actor=actor)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

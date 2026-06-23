@@ -24,14 +24,14 @@ def _entry(work_date: date, *, activity_type_id: int = 1, hours: str = "4.0", pr
 
 @pytest.mark.asyncio
 async def test_worker_cannot_access_report(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.get("/api/v1/reports/yearly", headers=auth(token), params={"year": 2026})
     assert res.status_code == 403
 
 
 @pytest.mark.asyncio
 async def test_year_target_hours_uses_working_days(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/reports/yearly", headers=auth(admin), params={"year": 2026})
     assert res.status_code == 200
     body = res.json()
@@ -46,7 +46,7 @@ async def test_report_aggregates_hours_by_month_and_activity(client: AsyncClient
     if today.year != 2026:
         pytest.skip("Test assumes year 2026 — adjust if calendar moves")
 
-    worker = await login_token(client, "developer1@company.com", "pass123")
+    worker = await login_token(client, "EMP001", "pass123")
     # Two PROJECT entries today (same month), one NON_PROJECT entry today.
     await client.post("/api/v1/workload-entries", headers=auth(worker), json=_entry(today, hours="2.5"))
     await client.post("/api/v1/workload-entries", headers=auth(worker), json=_entry(today, hours="1.5"))
@@ -56,7 +56,7 @@ async def test_report_aggregates_hours_by_month_and_activity(client: AsyncClient
         json=_entry(today, activity_type_id=2, project_id=None, hours="1.0"),
     )
 
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get(
         "/api/v1/reports/yearly", headers=auth(admin), params={"year": 2026}
     )
@@ -76,7 +76,7 @@ async def test_report_aggregates_hours_by_month_and_activity(client: AsyncClient
 
 @pytest.mark.asyncio
 async def test_team_filter(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get(
         "/api/v1/reports/yearly",
         headers=auth(admin),
@@ -91,7 +91,7 @@ async def test_team_filter(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_include_breakdown_false(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get(
         "/api/v1/reports/yearly",
         headers=auth(admin),

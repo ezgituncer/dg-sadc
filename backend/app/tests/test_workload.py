@@ -26,7 +26,7 @@ def _entry_payload(**overrides) -> dict:
 
 @pytest.mark.asyncio
 async def test_worker_can_create_own_entry(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.post(
         "/api/v1/workload-entries", headers=auth(token), json=_entry_payload()
     )
@@ -38,7 +38,7 @@ async def test_worker_can_create_own_entry(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_account_id_in_body_is_ignored(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     payload = _entry_payload()
     payload["account_id"] = "ADM001"  # try to spoof — should be ignored
     res = await client.post("/api/v1/workload-entries", headers=auth(token), json=payload)
@@ -48,7 +48,7 @@ async def test_account_id_in_body_is_ignored(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_future_date_rejected(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     future = (date.today() + timedelta(days=1)).isoformat()
     res = await client.post(
         "/api/v1/workload-entries",
@@ -61,7 +61,7 @@ async def test_future_date_rejected(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_date_older_than_30_days_rejected(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     too_old = (date.today() - timedelta(days=31)).isoformat()
     res = await client.post(
         "/api/v1/workload-entries",
@@ -73,7 +73,7 @@ async def test_date_older_than_30_days_rejected(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_project_required_when_activity_is_project(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.post(
         "/api/v1/workload-entries",
         headers=auth(token),
@@ -84,7 +84,7 @@ async def test_project_required_when_activity_is_project(client: AsyncClient) ->
 
 @pytest.mark.asyncio
 async def test_project_forbidden_for_non_project_activity(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.post(
         "/api/v1/workload-entries",
         headers=auth(token),
@@ -95,7 +95,7 @@ async def test_project_forbidden_for_non_project_activity(client: AsyncClient) -
 
 @pytest.mark.asyncio
 async def test_hours_must_be_quarter_step(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.post(
         "/api/v1/workload-entries",
         headers=auth(token),
@@ -107,12 +107,12 @@ async def test_hours_must_be_quarter_step(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_user_cannot_edit_other_users_entry(client: AsyncClient) -> None:
     # Worker A creates an entry
-    a = await login_token(client, "developer1@company.com", "pass123")
+    a = await login_token(client, "EMP001", "pass123")
     create = await client.post("/api/v1/workload-entries", headers=auth(a), json=_entry_payload())
     entry_id = create.json()["id"]
 
     # Worker B tries to edit it
-    b = await login_token(client, "developer2@company.com", "pass123")
+    b = await login_token(client, "EMP002", "pass123")
     edit = await client.patch(
         f"/api/v1/workload-entries/{entry_id}",
         headers=auth(b),
@@ -123,11 +123,11 @@ async def test_user_cannot_edit_other_users_entry(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_admin_cannot_edit_others_entry(client: AsyncClient) -> None:
-    a = await login_token(client, "developer1@company.com", "pass123")
+    a = await login_token(client, "EMP001", "pass123")
     create = await client.post("/api/v1/workload-entries", headers=auth(a), json=_entry_payload())
     entry_id = create.json()["id"]
 
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     edit = await client.patch(
         f"/api/v1/workload-entries/{entry_id}",
         headers=auth(admin),
@@ -138,7 +138,7 @@ async def test_admin_cannot_edit_others_entry(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_owner_can_edit_and_delete(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     create = await client.post(
         "/api/v1/workload-entries", headers=auth(token), json=_entry_payload()
     )
@@ -159,19 +159,23 @@ async def test_owner_can_edit_and_delete(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_worker_can_view_others_entries(client: AsyncClient) -> None:
-    a = await login_token(client, "developer1@company.com", "pass123")
+async def test_worker_sees_only_own_entries(client: AsyncClient) -> None:
+    # A worker's listing is scoped to their own entries — never anyone else's.
+    a = await login_token(client, "EMP001", "pass123")
     await client.post("/api/v1/workload-entries", headers=auth(a), json=_entry_payload())
 
-    b = await login_token(client, "developer2@company.com", "pass123")
+    b = await login_token(client, "EMP002", "pass123")
+    await client.post("/api/v1/workload-entries", headers=auth(b), json=_entry_payload())
     res = await client.get("/api/v1/workload-entries", headers=auth(b))
     assert res.status_code == 200
-    assert res.json()["total"] >= 1
+    items = res.json()["items"]
+    assert items, "worker should see their own entry"
+    assert all(e["account_id"] == "EMP002" for e in items)
 
 
 @pytest.mark.asyncio
 async def test_filter_by_account_id(client: AsyncClient) -> None:
-    a = await login_token(client, "developer1@company.com", "pass123")
+    a = await login_token(client, "EMP001", "pass123")
     await client.post("/api/v1/workload-entries", headers=auth(a), json=_entry_payload())
 
     res = await client.get(

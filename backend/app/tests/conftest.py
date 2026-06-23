@@ -123,8 +123,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     await engine.dispose()
 
 
-async def login_token(client: AsyncClient, email: str, password: str) -> str:
-    res = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
+async def login_token(client: AsyncClient, account_id: str, password: str) -> str:
+    res = await client.post(
+        "/api/v1/auth/login", json={"account_id": account_id, "password": password}
+    )
     assert res.status_code == 200, res.text
     return res.json()["access_token"]
 

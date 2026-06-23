@@ -30,16 +30,17 @@
 
       <form (ngSubmit)="submit()" (keydown.enter)="submit()" autocomplete="on">
         <div class="field">
-          <label>{{ 'login.email' | t }}</label>
+          <label>{{ 'login.account_id' | t }}</label>
           <div class="input-wrap">
-            <lucide-icon [img]="icons.Mail" size="14" class="icon-left"></lucide-icon>
+            <lucide-icon [img]="icons.UserIcon" size="14" class="icon-left"></lucide-icon>
             <input
-              type="email"
-              [ngModel]="email()"
-              (ngModelChange)="email.set($event)"
-              name="email"
+              type="text"
+              [ngModel]="accountId()"
+              (ngModelChange)="accountId.set($event)"
+              name="username"
               autocomplete="username"
-              [placeholder]="'login.email_placeholder' | t"
+              autocapitalize="characters"
+              [placeholder]="'login.account_id_placeholder' | t"
             />
           </div>
         </div>
@@ -89,7 +90,7 @@
           </button>
           @if (hintOpen()) {
             <div class="hint-list">
-              @for (account of seedAccounts; track account.email) {
+              @for (account of seedAccounts; track account.accountId) {
                 <div
                   class="hint-row"
                   role="button"
@@ -97,7 +98,7 @@
                   (click)="pickSeed(account)"
                   (keydown.enter)="pickSeed(account)"
                 >
-                  <span [style.color]="account.color">{{ account.email }}</span>
+                  <span [style.color]="account.color">{{ account.accountId }}</span>
                   / {{ account.password }}
                   <span class="muted">({{ account.label }})</span>
                 </div>

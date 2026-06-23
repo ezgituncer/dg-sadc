@@ -26,7 +26,7 @@ def _entry(work_date: date, **overrides) -> dict:
 
 @pytest.mark.asyncio
 async def test_aggregates_empty_when_no_entries(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/workload-entries/aggregates", headers=auth(token))
     assert res.status_code == 200
     body = res.json()
@@ -38,7 +38,7 @@ async def test_aggregates_empty_when_no_entries(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_aggregates_group_by_activity_and_project(client: AsyncClient) -> None:
-    worker = await login_token(client, "developer1@company.com", "pass123")
+    worker = await login_token(client, "EMP001", "pass123")
     today = date.today()
     # 2 PROJECT entries (project=1 / 4h total) and 1 NON_PROJECT (1h)
     await client.post("/api/v1/workload-entries", headers=auth(worker), json=_entry(today, hours_spent="2.5"))
@@ -49,7 +49,7 @@ async def test_aggregates_group_by_activity_and_project(client: AsyncClient) -> 
         json=_entry(today, activity_type_id=2, project_id=None, hours_spent="1.0"),
     )
 
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/workload-entries/aggregates", headers=auth(admin))
     assert res.status_code == 200
     body = res.json()
@@ -70,7 +70,7 @@ async def test_aggregates_group_by_activity_and_project(client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_aggregates_fill_missing_dates_in_range(client: AsyncClient) -> None:
-    worker = await login_token(client, "developer1@company.com", "pass123")
+    worker = await login_token(client, "EMP001", "pass123")
     today = date.today()
     yesterday = today - timedelta(days=1)
     # Only an entry today, nothing yesterday
@@ -96,7 +96,7 @@ async def test_aggregates_fill_missing_dates_in_range(client: AsyncClient) -> No
 
 @pytest.mark.asyncio
 async def test_aggregates_respect_filters(client: AsyncClient) -> None:
-    worker = await login_token(client, "developer1@company.com", "pass123")
+    worker = await login_token(client, "EMP001", "pass123")
     today = date.today()
     await client.post("/api/v1/workload-entries", headers=auth(worker), json=_entry(today, hours_spent="2.0"))
     await client.post(

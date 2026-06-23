@@ -7,14 +7,14 @@ from app.tests.conftest import auth, login_token
 
 @pytest.mark.asyncio
 async def test_worker_cannot_list_users(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.get("/api/v1/users", headers=auth(token))
     assert res.status_code == 403
 
 
 @pytest.mark.asyncio
 async def test_admin_lists_users(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/users", headers=auth(token))
     assert res.status_code == 200
     items = res.json()
@@ -24,7 +24,7 @@ async def test_admin_lists_users(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_create_user_happy_path(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users",
         headers=auth(token),
@@ -45,8 +45,10 @@ async def test_create_user_happy_path(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_worker_cannot_have_worker_manager(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+async def test_worker_cannot_report_to_another_worker(client: AsyncClient) -> None:
+    # Position 14 (Senior Frontend Developer) reports to Engineering Manager (or
+    # above). EMP001 is a developer, not an ancestor position → rejected.
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users",
         headers=auth(token),
@@ -56,8 +58,9 @@ async def test_worker_cannot_have_worker_manager(client: AsyncClient) -> None:
             "name": "Bad",
             "password": "abc123",
             "role_id": 6,
+            "position_id": 14,
             "team_id": 1,
-            "manager_account_id": "EMP001",  # EMP001 is a WORKER
+            "manager_account_id": "EMP001",  # EMP001 is a WORKER (developer)
         },
     )
     assert res.status_code == 400
@@ -65,8 +68,9 @@ async def test_worker_cannot_have_worker_manager(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_worker_must_have_manager(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+async def test_positioned_user_must_have_manager(client: AsyncClient) -> None:
+    # A non-root position (parent = Engineering Manager) requires a manager.
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users",
         headers=auth(token),
@@ -76,6 +80,7 @@ async def test_worker_must_have_manager(client: AsyncClient) -> None:
             "name": "X",
             "password": "abc123",
             "role_id": 6,
+            "position_id": 14,
             "team_id": 1,
         },
     )
@@ -84,7 +89,7 @@ async def test_worker_must_have_manager(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_duplicate_account_id_rejected(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users",
         headers=auth(token),
@@ -103,7 +108,7 @@ async def test_duplicate_account_id_rejected(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_duplicate_email_rejected(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users",
         headers=auth(token),
@@ -122,7 +127,7 @@ async def test_duplicate_email_rejected(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_cannot_deactivate_self(client: AsyncClient) -> None:
-    token = await login_token(client, "admin@company.com", "admin123")
+    token = await login_token(client, "ADM001", "admin123")
     res = await client.patch(
         "/api/v1/users/1",
         headers=auth(token),
@@ -133,7 +138,7 @@ async def test_cannot_deactivate_self(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_admin_can_reset_password(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.post(
         "/api/v1/users/12/reset-password",
         headers=auth(admin),
@@ -143,10 +148,11 @@ async def test_admin_can_reset_password(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_non_admin_cannot_reset_password(client: AsyncClient) -> None:
-    mgr = await login_token(client, "eng.manager@company.com", "mgr123")
+async def test_manager_cannot_reset_non_report_password(client: AsyncClient) -> None:
+    # MGR001 is not in the admin's manager chain → cannot reset the admin (id 1).
+    mgr = await login_token(client, "MGR001", "mgr123")
     res = await client.post(
-        "/api/v1/users/12/reset-password",
+        "/api/v1/users/1/reset-password",
         headers=auth(mgr),
         json={"new_password": "rotated"},
     )
@@ -154,8 +160,23 @@ async def test_non_admin_cannot_reset_password(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_manager_can_reset_own_report_password(client: AsyncClient) -> None:
+    # A manager may reset the password of anyone who reports to them.
+    admin = await login_token(client, "ADM001", "admin123")
+    users = (await client.get("/api/v1/users", headers=auth(admin))).json()
+    report = next(u for u in users if u["manager_account_id"] == "MGR001")
+    mgr = await login_token(client, "MGR001", "mgr123")
+    res = await client.post(
+        f"/api/v1/users/{report['id']}/reset-password",
+        headers=auth(mgr),
+        json={"new_password": "rotated"},
+    )
+    assert res.status_code == 204
+
+
+@pytest.mark.asyncio
 async def test_cannot_delete_manager_with_active_reports(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     # MGR001 (id=5) has many reports
     res = await client.delete("/api/v1/users/5", headers=auth(admin))
     assert res.status_code == 400
@@ -163,7 +184,7 @@ async def test_cannot_delete_manager_with_active_reports(client: AsyncClient) ->
 
 @pytest.mark.asyncio
 async def test_soft_delete_then_activate(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     # EMP010 (id=19, no reports) — Sema Tekin
     delete_res = await client.delete("/api/v1/users/19", headers=auth(admin))
     assert delete_res.status_code == 200
@@ -176,7 +197,7 @@ async def test_soft_delete_then_activate(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_directory_visible_to_workers(client: AsyncClient) -> None:
-    token = await login_token(client, "developer1@company.com", "pass123")
+    token = await login_token(client, "EMP001", "pass123")
     res = await client.get("/api/v1/users/directory", headers=auth(token))
     assert res.status_code == 200
     items = res.json()
@@ -199,7 +220,7 @@ async def test_directory_visible_to_workers(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_filter_by_role(client: AsyncClient) -> None:
-    admin = await login_token(client, "admin@company.com", "admin123")
+    admin = await login_token(client, "ADM001", "admin123")
     res = await client.get("/api/v1/users", headers=auth(admin), params={"role_id": 6})
     assert res.status_code == 200
     items = res.json()

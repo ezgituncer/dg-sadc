@@ -92,8 +92,13 @@ export class UsersComponent {
   readonly icons = { UserPlus, Search, Save, Trash2, KeyRound, Power, X, ChevronLeft, ChevronRight, Plus };
 
   readonly currentUser = this.auth.currentUser;
-  // Password reset is superuser-only (matches the backend's require_superuser).
-  readonly isAdmin = computed(() => this.auth.isSuperuser());
+
+  /** Password reset is allowed for superusers (admin), or for a manager on one
+   *  of their OWN direct team members (matches the backend rule). */
+  canResetPassword(u: UserListItem): boolean {
+    if (this.auth.isSuperuser()) return true;
+    return !!u.managerAccountId && u.managerAccountId === this.currentUser()?.accountId;
+  }
 
   // --- filters ---
   readonly roleFilter = signal<number | null>(null);

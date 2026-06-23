@@ -107,7 +107,7 @@
                   <button class="icon-btn" (click)="selectUser(u)" [title]="'common.edit' | t">
                     <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
                   </button>
-                  @if (isAdmin() && u.isActive) {
+                  @if (canResetPassword(u) && u.isActive) {
                     <button class="icon-btn warn" (click)="selectedId.set(u.id); openPasswordReset()" [title]="'users.btn_reset_pwd' | t">
                       <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
                     </button>
@@ -297,7 +297,7 @@
 
         @if (!creating() && selected(); as s) {
           <div class="modal-extra">
-            @if (isAdmin() && s.isActive) {
+            @if (canResetPassword(s) && s.isActive) {
               <button class="btn-warn" (click)="openPasswordReset()">
                 <lucide-icon [img]="icons.KeyRound" size="12"></lucide-icon>
                 {{ 'users.btn_reset_pwd' | t }}

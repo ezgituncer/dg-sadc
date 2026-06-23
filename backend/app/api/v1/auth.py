@@ -28,13 +28,13 @@ async def login(
     user = (
         await db.execute(
             select(User)
-            .where(User.email == payload.email.lower())
+            .where(User.account_id == payload.account_id.upper())
             .options(joinedload(User.role).selectinload(Role.permissions))
         )
     ).scalar_one_or_none()
 
     # Always run verify_password (even when user is None) so the timing of a
-    # missing-email response matches a wrong-password response.
+    # missing-account response matches a wrong-password response.
     candidate_hash = (
         user.password_hash
         if user is not None
@@ -45,7 +45,7 @@ async def login(
     if user is None or not password_ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid account ID or password",
         )
     if not user.is_active:
         raise HTTPException(

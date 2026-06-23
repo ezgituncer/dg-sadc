@@ -213,8 +213,19 @@ async def update_user(
     return user
 
 
-async def reset_password(db: AsyncSession, user_id: int, new_password: str) -> None:
+async def reset_password(
+    db: AsyncSession, user_id: int, new_password: str, *, actor: User
+) -> None:
+    """Reset another user's password. Allowed for superusers (admin) and for a
+    manager resetting one of their OWN direct team members."""
     user = await get_user(db, user_id)
+    is_superuser = bool(actor.role and actor.role.is_superuser)
+    is_direct_manager = user.manager_account_id == actor.account_id
+    if not (is_superuser or is_direct_manager):
+        raise HTTPException(
+            status_code=403,
+            detail="You can only reset passwords for your own team members",
+        )
     user.password_hash = hash_password(new_password)
     await db.flush()
 

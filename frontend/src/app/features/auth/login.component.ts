@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Loader2,
   Lock,
-  Mail,
+  User as UserIcon,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -16,7 +16,7 @@ import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { environment } from '../../../environments/environment';
 
 interface SeedAccount {
-  email: string;
+  accountId: string;
   password: string;
   label: string;
   color: string;
@@ -37,33 +37,33 @@ export class LoginComponent {
 
   readonly showSeedHint = environment.showSeedAccountsHint;
 
-  readonly icons = { Mail, Lock, AlertCircle, Loader2 };
+  readonly icons = { UserIcon, Lock, AlertCircle, Loader2 };
 
-  readonly email = signal('');
+  readonly accountId = signal('');
   readonly password = signal('');
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly hintOpen = signal(false);
 
   readonly seedAccounts: SeedAccount[] = [
-    { email: 'admin@company.com', password: 'admin123', label: 'Admin', color: 'var(--c-teal)' },
-    { email: 'hr.manager@company.com', password: 'hr123', label: 'HR', color: 'var(--c-blue)' },
-    { email: 'eng.manager@company.com', password: 'mgr123', label: 'Manager', color: 'var(--c-purple)' },
-    { email: 'frontend.lead@company.com', password: 'tl123', label: 'Tech Lead', color: 'var(--c-amber)' },
-    { email: 'qa.lead@company.com', password: 'qa123', label: 'QA', color: 'var(--c-pink)' },
-    { email: 'developer1@company.com', password: 'pass123', label: 'Worker', color: 'var(--c-green)' },
+    { accountId: 'ADM001', password: 'admin123', label: 'Admin', color: 'var(--c-teal)' },
+    { accountId: 'HR001', password: 'hr123', label: 'HR', color: 'var(--c-blue)' },
+    { accountId: 'MGR001', password: 'mgr123', label: 'Manager', color: 'var(--c-purple)' },
+    { accountId: 'TL001', password: 'tl123', label: 'Tech Lead', color: 'var(--c-amber)' },
+    { accountId: 'QA001', password: 'qa123', label: 'QA', color: 'var(--c-pink)' },
+    { accountId: 'EMP001', password: 'pass123', label: 'Worker', color: 'var(--c-green)' },
   ];
 
   submit(): void {
     this.error.set(null);
-    const email = this.email().trim();
+    const accountId = this.accountId().trim();
     const password = this.password();
-    if (!email || !password) {
+    if (!accountId || !password) {
       this.error.set(this.localeSvc.t('login.error_required'));
       return;
     }
     this.loading.set(true);
-    this.auth.login(email, password).subscribe({
+    this.auth.login(accountId, password).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigateByUrl('/dashboard');
@@ -79,7 +79,7 @@ export class LoginComponent {
   }
 
   pickSeed(account: SeedAccount): void {
-    this.email.set(account.email);
+    this.accountId.set(account.accountId);
     this.password.set(account.password);
   }
 
