@@ -1,4 +1,4 @@
-"""Workload entry business logic — CRUD with 30-day window + ownership rules."""
+"""Workload entry business logic — CRUD with 32-day window + ownership rules."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -17,7 +17,7 @@ from app.models import (
 )
 from app.schemas.workload import WorkloadEntryCreate, WorkloadEntryUpdate
 
-EDIT_WINDOW_DAYS = 30  # noqa
+EDIT_WINDOW_DAYS = 32  # noqa
 
 ALLOWED_SORT_COLUMNS = {
     "work_date": WorkloadEntry.work_date,

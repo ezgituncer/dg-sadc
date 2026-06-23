@@ -147,7 +147,7 @@ export const EN_DICTIONARY = {
     work_date: 'Work date',
     btn_today: 'Today',
     locked_msg:
-      'This date is more than 30 days old. New entries and edits are disabled.',
+      'This date is more than 32 days old. New entries and edits are disabled.',
     edit_mode: 'Edit mode',
     edit_back: 'Back to new entry',
     activity_type: 'Activity type',
@@ -190,7 +190,7 @@ export const EN_DICTIONARY = {
     confirm_delete_msg:
       'This workload entry will be permanently removed. This cannot be undone.',
     toast_added: 'Workload added',
-    toast_lock: 'This date cannot be edited (older than 30 days)',
+    toast_lock: 'This date cannot be edited (older than 32 days)',
   },
 
   workload_list: {

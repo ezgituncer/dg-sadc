@@ -18,7 +18,7 @@ export function formatIso(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const EDIT_WINDOW_DAYS = 30;
+const EDIT_WINDOW_DAYS = 32;
 
 export function isWithinEditWindow(workDate: string): boolean {
   const today = new Date();

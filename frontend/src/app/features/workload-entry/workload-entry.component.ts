@@ -187,6 +187,7 @@ export class WorkloadEntryComponent {
     });
   }
 
+
   setDate(value: string): void {
     this.date.set(value);
     this.resetForm();

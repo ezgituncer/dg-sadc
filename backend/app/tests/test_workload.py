@@ -60,9 +60,9 @@ async def test_future_date_rejected(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_date_older_than_30_days_rejected(client: AsyncClient) -> None:
+async def test_date_older_than_window_rejected(client: AsyncClient) -> None:
     token = await login_token(client, "EMP001", "pass123")
-    too_old = (date.today() - timedelta(days=31)).isoformat()
+    too_old = (date.today() - timedelta(days=33)).isoformat()
     res = await client.post(
         "/api/v1/workload-entries",
         headers=auth(token),

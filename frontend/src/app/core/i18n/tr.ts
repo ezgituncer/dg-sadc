@@ -156,7 +156,7 @@ export const TR_DICTIONARY = {
     work_date: 'Çalışma tarihi',
     btn_today: 'Bugün',
     locked_msg:
-      'Bu tarih 30 günden eski. Yeni giriş yapılamaz, mevcut kayıtlar düzenlenemez.',
+      'Bu tarih 32 günden eski. Yeni giriş yapılamaz, mevcut kayıtlar düzenlenemez.',
     edit_mode: 'Kayıt düzenleme modu',
     edit_back: 'Yeni kayda dön',
     activity_type: 'Faaliyet türü',
@@ -199,7 +199,7 @@ export const TR_DICTIONARY = {
     confirm_delete_msg:
       'Bu workload kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.',
     toast_added: 'Workload eklendi',
-    toast_lock: 'Bu tarih düzenlenemez (30 günden eski)',
+    toast_lock: 'Bu tarih düzenlenemez (32 günden eski)',
   },
 
   workload_list: {
