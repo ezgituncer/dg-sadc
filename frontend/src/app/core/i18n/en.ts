@@ -61,6 +61,18 @@ export const EN_DICTIONARY = {
     switch_aria: 'Switch language',
   },
 
+  profile: {
+    change_password: 'Change password',
+    current_password: 'Current password',
+    new_password: 'New password',
+    confirm_password: 'Confirm new password',
+    current_required: 'Enter your current password',
+    pwd_too_short: 'New password must be at least 6 characters',
+    pwd_mismatch: 'Passwords do not match',
+    current_wrong: 'Current password is incorrect',
+    pwd_changed: 'Your password has been updated',
+  },
+
   nav: {
     dashboard: 'Dashboard',
     workload_group: 'Workload',
@@ -113,7 +125,9 @@ export const EN_DICTIONARY = {
     empty: 'No users yet',
     empty_hr: 'No HR users yet',
     empty_qa: 'No QA team members yet',
+    empty_business: 'No Business PLR users yet',
     panel_team: 'Team',
+    panel_business: 'Business PLR',
     panel_hr: 'HR',
     panel_qa: 'QA Team',
     outside_tree_label: 'Outside the org tree',

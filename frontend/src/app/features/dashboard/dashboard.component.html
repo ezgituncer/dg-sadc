@@ -47,6 +47,28 @@
     <section class="side">
       <div class="side-card">
         <div class="side-head">
+          <span class="dot" style="background: var(--c-blue);"></span>
+          {{ 'dashboard.panel_business' | t }}
+          <span class="count">{{ businessUsers().length }}</span>
+        </div>
+        @if (businessUsers().length === 0) {
+          <div class="side-empty">{{ 'dashboard.empty_business' | t }}</div>
+        } @else {
+          <div class="side-list">
+            @for (u of businessUsers(); track u.accountId) {
+              <div class="side-row">
+                <div class="side-info">
+                  <div class="side-name">{{ u.name }}</div>
+                  <div class="side-meta">{{ u.positionName || u.accountId }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="side-card">
+        <div class="side-head">
           <span class="dot" style="background: var(--c-amber);"></span>
           {{ 'dashboard.panel_hr' | t }}
           <span class="count">{{ hrUsers().length }}</span>
@@ -55,11 +77,11 @@
           <div class="side-empty">{{ 'dashboard.empty_hr' | t }}</div>
         } @else {
           <div class="side-list">
-            @for (u of hrUsers(); track u.id) {
+            @for (u of hrUsers(); track u.accountId) {
               <div class="side-row">
                 <div class="side-info">
                   <div class="side-name">{{ u.name }}</div>
-                  <div class="side-meta">{{ u.positionName || u.email }}</div>
+                  <div class="side-meta">{{ u.positionName || u.accountId }}</div>
                 </div>
               </div>
             }
@@ -77,11 +99,11 @@
           <div class="side-empty">{{ 'dashboard.empty_qa' | t }}</div>
         } @else {
           <div class="side-list">
-            @for (u of qaUsers(); track u.id) {
+            @for (u of qaUsers(); track u.accountId) {
               <div class="side-row">
                 <div class="side-info">
                   <div class="side-name">{{ u.name }}</div>
-                  <div class="side-meta">{{ u.positionName || u.email }}</div>
+                  <div class="side-meta">{{ u.positionName || u.accountId }}</div>
                 </div>
               </div>
             }

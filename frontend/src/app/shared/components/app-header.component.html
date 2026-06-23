@@ -33,6 +33,10 @@
           }
           <div class="profile-id">{{ 'nav.id' | t }}: {{ user.accountId }}</div>
         </div>
+        <button type="button" class="profile-action" (click)="openPasswordDialog()">
+          <lucide-icon [img]="keyIcon" size="14"></lucide-icon>
+          {{ 'profile.change_password' | t }}
+        </button>
         <button type="button" class="logout-btn" (click)="logout()">
           <lucide-icon [img]="logOutIcon" size="14"></lucide-icon>
           {{ 'nav.logout' | t }}
@@ -40,4 +44,15 @@
       </div>
     }
   </header>
+
+  @if (pwdDialogOpen()) {
+    <app-change-password-dialog
+      (done)="onPasswordChanged()"
+      (cancel)="pwdDialogOpen.set(false)"
+    />
+  }
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
 }

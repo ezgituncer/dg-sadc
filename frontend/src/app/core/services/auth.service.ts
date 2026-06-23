@@ -68,6 +68,13 @@ export class AuthService {
     return codes.some((c) => perms.has(c));
   }
 
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/change-password`, {
+      currentPassword,
+      newPassword,
+    });
+  }
+
   refreshFromServer(): Observable<CurrentUser> {
     return this.http.get<CurrentUser>(`${environment.apiUrl}/auth/me`).pipe(
       tap((user) => {

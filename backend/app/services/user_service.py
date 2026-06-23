@@ -2,7 +2,9 @@
 
 The org hierarchy lives entirely on `position` now. `role` is auth-only and
 deliberately not consulted by `_validate_hierarchy`. Rule: a user holding
-position P must report to a user whose position is exactly P.parent_position.
+position P must report to a user whose position is an ANCESTOR of P — the
+immediate parent or any position higher up the parent chain (so e.g. a Tech Lead
+may report to its Engineering Manager or to the Head of Engineering above that).
 Root positions (parent_position_id IS NULL) cannot have a manager.
 """
 from __future__ import annotations
@@ -27,17 +29,36 @@ async def _get_position(db: AsyncSession, position_id: int) -> Position:
     return pos
 
 
+async def _ancestor_position_ids(db: AsyncSession, start_position_id: int) -> list[int]:
+    """All position ids from `start_position_id` up to the root, inclusive.
+
+    Walks the `parent_position_id` chain so callers can check membership against
+    every position above a given point (not just the immediate parent)."""
+    ids: list[int] = []
+    cursor: int | None = start_position_id
+    guard = 50  # safety against malformed cycles
+    while cursor is not None and guard > 0:
+        ids.append(cursor)
+        pos = await _get_position(db, cursor)
+        cursor = pos.parent_position_id
+        guard -= 1
+    return ids
+
+
 async def _validate_hierarchy(
     db: AsyncSession,
     position_id: int | None,
     manager_account_id: str | None,
 ) -> None:
-    """A user's manager must hold the parent position of theirs.
+    """A user's manager must hold an ANCESTOR position of theirs.
 
     - position_id is None      → no constraint (legacy users with no position set).
     - parent_position_id None  → root: must NOT have a manager.
-    - otherwise                → manager required and manager.position_id must
-                                 equal user.position.parent_position_id.
+    - otherwise                → manager required and manager.position_id must be
+                                 the immediate parent OR any position higher up the
+                                 parent_position_id chain. e.g. a Tech Lead may
+                                 report to the Engineering Manager above it OR to
+                                 the Head of Engineering above that.
     """
     if position_id is None:
         return
@@ -70,14 +91,15 @@ async def _validate_hierarchy(
     if manager is None or not manager.is_active:
         raise HTTPException(status_code=400, detail="Manager not found or inactive")
 
-    if manager.position_id != pos.parent_position_id:
+    ancestor_ids = await _ancestor_position_ids(db, pos.parent_position_id)
+    if manager.position_id not in ancestor_ids:
         parent = await _get_position(db, pos.parent_position_id)
         manager_pos_name = manager.position.name if manager.position else "(none)"
         raise HTTPException(
             status_code=400,
             detail=(
                 f"Manager's position is {manager_pos_name!r}, but position "
-                f"{pos.name!r} must report to {parent.name!r}"
+                f"{pos.name!r} must report to {parent.name!r} or a position above it"
             ),
         )
 

@@ -328,6 +328,9 @@
                     <td class="hours-cell">{{ entry.hoursSpent }}</td>
                     <td class="row-actions">
                       @if (canEditEntry(entry)) {
+                        <button class="icon-btn" (click)="editEntry(entry)" [title]="'common.edit' | t">
+                          <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
+                        </button>
                         <button class="icon-btn danger" (click)="askDelete(entry.id)" [title]="'common.delete' | t">
                           <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
                         </button>

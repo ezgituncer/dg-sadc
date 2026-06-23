@@ -80,6 +80,16 @@
 .profile-position { font-size: 11px; color: var(--c-text-muted); margin-top: 8px; }
 .profile-id { font-size: 10px; color: var(--c-text-muted); margin-top: 4px; font-family: monospace; }
 
+.profile-action {
+  width: 100%; padding: 10px 16px; background: transparent;
+  border: none; border-bottom: 1px solid var(--c-border);
+  cursor: pointer; color: var(--c-text-secondary); font-size: 12px;
+  display: flex; align-items: center; gap: 8px;
+  font-family: inherit; text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.profile-action:hover { background: var(--c-surface-hover); color: var(--c-text-primary); }
+
 .logout-btn {
   width: 100%; padding: 10px 16px; background: transparent; border: none;
   cursor: pointer; color: var(--c-red); font-size: 12px;

@@ -134,6 +134,7 @@
               <th>{{ 'workload_list.th_description' | t }}</th>
               <th>{{ 'workload_list.th_status' | t }}</th>
               <th class="right">{{ 'workload_list.th_hours' | t }}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -151,11 +152,36 @@
                 <td class="desc-cell" [title]="entry.taskDescription">{{ entry.taskDescription }}</td>
                 <td><span class="pill pill-{{ entry.status }}">{{ entry.status }}</span></td>
                 <td class="right hours-cell">{{ entry.hoursSpent }}h</td>
+                <td class="right">
+                  @if (canEdit(entry)) {
+                    <button class="row-edit" (click)="editEntry(entry)" [title]="'common.edit' | t">
+                      <lucide-icon [img]="icons.Edit2" size="13"></lucide-icon>
+                    </button>
+                    <button class="row-edit danger" (click)="askDelete(entry.id)" [title]="'common.delete' | t">
+                      <lucide-icon [img]="icons.Trash2" size="13"></lucide-icon>
+                    </button>
+                  }
+                </td>
               </tr>
             }
           </tbody>
         </table>
       }
     </section>
+  }
+
+  @if (toast(); as t) {
+    <app-toast [message]="t.message" [kind]="t.kind" />
+  }
+
+  @if (confirmDeleteId() !== null) {
+    <app-confirm-dialog
+      [title]="'workload_entry.confirm_delete_title' | t"
+      [message]="'workload_entry.confirm_delete_msg' | t"
+      [confirmLabel]="'common.delete' | t"
+      [danger]="true"
+      (confirm)="confirmDelete()"
+      (cancel)="cancelDelete()"
+    />
   }
 </div>

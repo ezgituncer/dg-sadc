@@ -15,15 +15,15 @@ import {
   PositionsService,
   RolesService,
   TeamsService,
+  UserDirectoryEntry,
   UsersService,
 } from '../../core/services/users.service';
 import { LocaleService } from '../../core/services/locale.service';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { ToastComponent } from '../../shared/components/toast.component';
-import { UserListItem } from '../../core/models/admin';
 
 interface OrgNodeData {
-  user: UserListItem;
+  user: UserDirectoryEntry;
   reports: OrgNodeData[];
 }
 
@@ -32,6 +32,7 @@ interface OrgNodeData {
 // position in DB would silently break this.
 const HR_SUBTREE_ROOT = 'HR Manager';
 const QA_SUBTREE_ROOT = 'QA Lead';
+const BUSINESS_SUBTREE_ROOT = 'Business PLR';
 
 @Component({
   selector: 'app-dashboard',
@@ -77,7 +78,7 @@ export class DashboardComponent implements OnInit {
 
   readonly saveIcon = Save;
 
-  readonly users = signal<UserListItem[]>([]);
+  readonly users = signal<UserDirectoryEntry[]>([]);
   readonly loading = signal(true);
 
   // --- Export to PNG ---
@@ -86,7 +87,8 @@ export class DashboardComponent implements OnInit {
   readonly exporting = signal(false);
   readonly toast = signal<{ message: string; kind: 'success' | 'error' } | null>(null);
 
-  readonly activeUsers = computed(() => this.users().filter((u) => u.isActive));
+  // The directory endpoint already returns only active users.
+  readonly activeUsers = computed(() => this.users());
 
   // Tree contains everyone whose position is not under HR or QA.
   readonly roots = computed<OrgNodeData[]>(() => {
@@ -96,7 +98,8 @@ export class DashboardComponent implements OnInit {
     const eligible = all.filter(
       (u) =>
         !this.isInPositionSubtree(u.positionId, HR_SUBTREE_ROOT) &&
-        !this.isInPositionSubtree(u.positionId, QA_SUBTREE_ROOT),
+        !this.isInPositionSubtree(u.positionId, QA_SUBTREE_ROOT) &&
+        !this.isInPositionSubtree(u.positionId, BUSINESS_SUBTREE_ROOT),
     );
     return eligible
       .filter(
@@ -106,6 +109,13 @@ export class DashboardComponent implements OnInit {
       )
       .map((u) => this.buildNode(u, eligible))
       .sort((a, b) => a.user.name.localeCompare(b.user.name, 'tr'));
+  });
+
+  readonly businessUsers = computed(() => {
+    this.positions.list();
+    return this.activeUsers().filter((u) =>
+      this.isInPositionSubtree(u.positionId, BUSINESS_SUBTREE_ROOT),
+    );
   });
 
   readonly hrUsers = computed(() => {
@@ -132,16 +142,18 @@ export class DashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.list({ isActive: true }).subscribe({
-      next: (res) => {
-        this.users.set(res);
+    // Use the directory endpoint (open to every authenticated user, incl. workers)
+    // rather than GET /users which requires the users.view permission.
+    this.api
+      .loadDirectory()
+      .then((map) => {
+        this.users.set(Array.from(map.values()));
         this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+      })
+      .catch(() => this.loading.set(false));
   }
 
-  private buildNode(user: UserListItem, pool: UserListItem[]): OrgNodeData {
+  private buildNode(user: UserDirectoryEntry, pool: UserDirectoryEntry[]): OrgNodeData {
     const reports = pool
       .filter((u) => u.managerAccountId === user.accountId)
       .map((u) => this.buildNode(u, pool))

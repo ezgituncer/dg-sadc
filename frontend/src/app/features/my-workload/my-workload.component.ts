@@ -19,14 +19,19 @@ import {
   AlertCircle,
   CheckCircle2,
   Plus,
+  Edit2,
+  Trash2,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
+import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
 import { ReportService } from '../../core/services/report.service';
 import { WorkloadService } from '../../core/services/workload.service';
 import { WorkloadEntry } from '../../core/models/workload';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
+import { ToastComponent } from '../../shared/components/toast.component';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog.component';
 import { TR_MONTHS_FULL } from '../../shared/utils/cell-tone';
 import { formatIso, isoToday, isWithinEditWindow } from '../../shared/utils/date.utils';
 
@@ -48,7 +53,14 @@ interface DayCell {
 @Component({
   selector: 'app-my-workload',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    LucideAngularModule,
+    TranslatePipe,
+    ToastComponent,
+    ConfirmDialogComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-workload.component.html',
   styleUrl: './my-workload.component.css',
@@ -59,8 +71,12 @@ export class MyWorkloadComponent {
   private readonly reportApi = inject(ReportService);
   private readonly api = inject(WorkloadService);
   private readonly router = inject(Router);
+  private readonly localeSvc = inject(LocaleService);
 
-  readonly icons = { Calendar, CalendarDays, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Plus };
+  readonly confirmDeleteId = signal<number | null>(null);
+  readonly toast = signal<{ message: string; kind: 'success' | 'error' } | null>(null);
+
+  readonly icons = { Calendar, CalendarDays, ChevronLeft, ChevronRight, Clock, AlertCircle, CheckCircle2, Plus, Edit2, Trash2 };
 
   readonly trMonths = TR_MONTHS_FULL;
   // Monday-first weekday labels for the calendar header.
@@ -259,6 +275,49 @@ export class MyWorkloadComponent {
     event.stopPropagation();
     if (!cell.date) return;
     this.router.navigate(['/workload-entry'], { queryParams: { date: cell.date } });
+  }
+
+  /** Own entry editable only within the 30-day window. */
+  canEdit(entry: WorkloadEntry): boolean {
+    return isWithinEditWindow(entry.workDate);
+  }
+
+  /** Open the entry form to edit this entry. */
+  editEntry(entry: WorkloadEntry): void {
+    this.router.navigate(['/workload-entry'], {
+      queryParams: { date: entry.workDate, edit: entry.id },
+    });
+  }
+
+  // --- Delete (own entry, within the 30-day window) ---
+  askDelete(id: number): void {
+    this.confirmDeleteId.set(id);
+  }
+  cancelDelete(): void {
+    this.confirmDeleteId.set(null);
+  }
+  confirmDelete(): void {
+    const id = this.confirmDeleteId();
+    if (id == null) return;
+    this.confirmDeleteId.set(null);
+    this.api.delete(id).subscribe({
+      next: () => {
+        // Drop it locally so the calendar + day detail refresh immediately.
+        this.entries.update((list) => list.filter((e) => e.id !== id));
+        this.flashToast(this.localeSvc.t('common.deleted'), 'success');
+      },
+      error: (err) => {
+        const detail = err?.error?.detail;
+        this.flashToast(
+          typeof detail === 'string' ? detail : this.localeSvc.t('common.failed_delete'),
+          'error',
+        );
+      },
+    });
+  }
+  private flashToast(message: string, kind: 'success' | 'error'): void {
+    this.toast.set({ message, kind });
+    setTimeout(() => this.toast.set(null), 2500);
   }
 
   // --- lookup helpers for the detail panel ---

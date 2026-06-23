@@ -10,9 +10,9 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
 from app.models import Role, User
-from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.auth import LoginRequest, PasswordChangeRequest, TokenResponse
 from app.schemas.user import UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -60,6 +60,20 @@ async def login(
 @router.get("/me", response_model=UserOut)
 async def me(current: User = Depends(get_current_user)) -> UserOut:
     return UserOut.from_model(current)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)
+async def change_password(
+    payload: PasswordChangeRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current: User = Depends(get_current_user),
+) -> Response:
+    """Any authenticated user changes their OWN password (verifies the current one)."""
+    if not verify_password(payload.current_password, current.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current.password_hash = hash_password(payload.new_password)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, response_class=Response)

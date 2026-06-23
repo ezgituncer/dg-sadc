@@ -111,6 +111,7 @@ class UserDirectoryEntry(BaseModel):
     position_id: int | None = None
     position_name: str | None = None
     team_id: int | None = None
+    manager_account_id: str | None = None
 
     @classmethod
     def from_model(cls, user) -> "UserDirectoryEntry":
@@ -121,4 +122,5 @@ class UserDirectoryEntry(BaseModel):
             position_id=user.position_id,
             position_name=user.position.name if user.position else None,
             team_id=user.team_id,
+            manager_account_id=user.manager_account_id,
         )

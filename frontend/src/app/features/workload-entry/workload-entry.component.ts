@@ -163,11 +163,19 @@ export class WorkloadEntryComponent {
     return true;
   });
 
+  /** Entry id to auto-open for editing once the day's entries load (from ?edit=). */
+  private pendingEditId: number | null = null;
+
   constructor() {
-    // Pre-select a day when navigated here with ?date=YYYY-MM-DD (e.g. from My Workload).
+    // Pre-select a day when navigated here with ?date=YYYY-MM-DD (e.g. from My Workload
+    // or the listing's "edit" action), and optionally open an entry via ?edit=<id>.
     const qpDate = this.route.snapshot.queryParamMap.get('date');
     if (qpDate && /^\d{4}-\d{2}-\d{2}$/.test(qpDate)) {
       this.date.set(qpDate);
+    }
+    const qpEdit = this.route.snapshot.queryParamMap.get('edit');
+    if (qpEdit && /^\d+$/.test(qpEdit)) {
+      this.pendingEditId = parseInt(qpEdit, 10);
     }
 
     // Refetch the day's entries whenever the date changes (or after a successful submit).
@@ -293,6 +301,12 @@ export class WorkloadEntryComponent {
         next: (res) => {
           this.entries.set(res.items);
           this.loading.set(false);
+          // If we arrived via ?edit=<id>, open that entry in the form (own + within window).
+          if (this.pendingEditId !== null) {
+            const match = res.items.find((e) => e.id === this.pendingEditId);
+            this.pendingEditId = null;
+            if (match && this.canEditEntry(match)) this.edit(match);
+          }
         },
         error: () => {
           this.entries.set([]);

@@ -181,8 +181,16 @@ async def test_directory_visible_to_workers(client: AsyncClient) -> None:
     assert res.status_code == 200
     items = res.json()
     assert len(items) >= 19
-    # Minimal payload only
-    assert set(items[0].keys()) == {"account_id", "name", "role_code", "team_id"}
+    # Directory payload — minimal identity + org-chart fields (used by the dashboard).
+    assert set(items[0].keys()) == {
+        "account_id",
+        "name",
+        "role_code",
+        "position_id",
+        "position_name",
+        "team_id",
+        "manager_account_id",
+    }
     # Names from the seed are present
     names = {i["name"] for i in items}
     assert "Ayşe Yılmaz" in names

@@ -70,6 +70,18 @@ export const TR_DICTIONARY = {
     switch_aria: 'Dili değiştir',
   },
 
+  profile: {
+    change_password: 'Şifre değiştir',
+    current_password: 'Mevcut şifre',
+    new_password: 'Yeni şifre',
+    confirm_password: 'Yeni şifre (tekrar)',
+    current_required: 'Mevcut şifreyi gir',
+    pwd_too_short: 'Yeni şifre en az 6 karakter olmalı',
+    pwd_mismatch: 'Şifreler eşleşmiyor',
+    current_wrong: 'Mevcut şifre hatalı',
+    pwd_changed: 'Şifren güncellendi',
+  },
+
   nav: {
     dashboard: 'Panel',
     workload_group: 'İş yükü',
@@ -122,7 +134,9 @@ export const TR_DICTIONARY = {
     empty: 'Henüz kullanıcı yok',
     empty_hr: 'Henüz HR yok',
     empty_qa: 'Henüz QA çalışanı yok',
+    empty_business: 'Henüz Business PLR yok',
     panel_team: 'Takım',
+    panel_business: 'Business PLR',
     panel_hr: 'HR',
     panel_qa: 'QA Takımı',
     outside_tree_label: 'Organizasyon ağacının dışındakiler',

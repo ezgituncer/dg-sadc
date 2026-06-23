@@ -142,6 +142,15 @@
 .detail-table .right { text-align: right; }
 .hours-cell { font-weight: 600; color: var(--c-teal); white-space: nowrap; }
 
+.row-edit {
+  background: transparent; border: 1px solid var(--c-border); border-radius: 5px;
+  padding: 4px 6px; cursor: pointer; color: var(--c-text-muted);
+  display: inline-flex; align-items: center; font-family: inherit;
+}
+.row-edit:hover { color: var(--c-teal); border-color: var(--c-border-hover); }
+.row-edit + .row-edit { margin-left: 6px; }
+.row-edit.danger:hover { color: var(--c-red); border-color: rgba(239, 68, 68, 0.4); }
+
 .cat-cell { display: inline-flex; align-items: center; gap: 6px; }
 .cat-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--c-teal); display: inline-block; }
 .desc-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c-text-secondary); }

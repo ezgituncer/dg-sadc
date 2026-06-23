@@ -27,6 +27,7 @@ import {
   BarChart3,
   Users as UsersIcon,
 } from 'lucide-angular';
+import { Router } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import type { ChartConfiguration, ChartData } from 'chart.js';
 
@@ -79,6 +80,7 @@ export class WorkloadListComponent {
   protected readonly users = inject(UsersService);
   private readonly api = inject(WorkloadService);
   private readonly localeSvc = inject(LocaleService);
+  private readonly router = inject(Router);
 
   readonly icons = {
     Calendar, Search, Save, X, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronDown,
@@ -615,15 +617,19 @@ export class WorkloadListComponent {
     return this.lookups.findTaskType(id)?.name ?? '—';
   }
   canEditEntry(entry: WorkloadEntry): boolean {
-    if (this.isWorker()) {
-      // Workers can never edit/delete from the listings (per TASK.md).
-      return false;
-    }
-    // Non-workers can only edit/delete their own entries (company policy).
+    // Anyone may edit/delete THEIR OWN entries within the 30-day window
+    // (the backend enforces both ownership and the window as well).
     return (
       entry.accountId === this.currentUser()?.accountId &&
       isWithinEditWindow(entry.workDate)
     );
+  }
+
+  /** Open the entry form for this entry (only allowed within the 30-day window). */
+  editEntry(entry: WorkloadEntry): void {
+    this.router.navigate(['/workload-entry'], {
+      queryParams: { date: entry.workDate, edit: entry.id },
+    });
   }
   isOwn(entry: WorkloadEntry): boolean {
     return entry.accountId === this.currentUser()?.accountId;

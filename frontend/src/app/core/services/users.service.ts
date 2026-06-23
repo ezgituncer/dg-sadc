@@ -26,7 +26,10 @@ export interface UserDirectoryEntry {
   accountId: string;
   name: string;
   roleCode: string | null;
+  positionId: number | null;
+  positionName: string | null;
   teamId: number | null;
+  managerAccountId: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -6,12 +6,14 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule, LogOut } from 'lucide-angular';
+import { LucideAngularModule, LogOut, KeyRound } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
 import { LocaleService } from '../../core/services/locale.service';
 import { TranslatePipe } from '../../core/pipes/translate.pipe';
 import { RoleCode } from '../../core/models/role';
+import { ChangePasswordDialogComponent } from './change-password-dialog.component';
+import { ToastComponent } from './toast.component';
 
 const ROLE_LABEL: Record<RoleCode, string> = {
   ADMIN: 'Admin',
@@ -25,7 +27,13 @@ const ROLE_LABEL: Record<RoleCode, string> = {
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, TranslatePipe],
+  imports: [
+    CommonModule,
+    LucideAngularModule,
+    TranslatePipe,
+    ChangePasswordDialogComponent,
+    ToastComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app-header.component.html',
   styleUrl: './app-header.component.css',
@@ -36,8 +44,11 @@ export class AppHeaderComponent {
 
   readonly currentUser = this.auth.currentUser;
   readonly logOutIcon = LogOut;
+  readonly keyIcon = KeyRound;
 
   readonly profileOpen = signal(false);
+  readonly pwdDialogOpen = signal(false);
+  readonly toast = signal<{ message: string; kind: 'success' | 'error' } | null>(null);
 
   readonly initials = computed<string>(() => {
     const name = this.currentUser()?.name ?? '';
@@ -60,5 +71,15 @@ export class AppHeaderComponent {
   logout(): void {
     this.profileOpen.set(false);
     this.auth.logout();
+  }
+
+  openPasswordDialog(): void {
+    this.profileOpen.set(false);
+    this.pwdDialogOpen.set(true);
+  }
+  onPasswordChanged(): void {
+    this.pwdDialogOpen.set(false);
+    this.toast.set({ message: this.localeService.t('profile.pwd_changed'), kind: 'success' });
+    setTimeout(() => this.toast.set(null), 2500);
   }
 }
