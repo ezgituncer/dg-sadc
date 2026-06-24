@@ -30,6 +30,7 @@ import {
 import { Router } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import type { ChartConfiguration, ChartData } from 'chart.js';
+import { Workbook } from 'exceljs';
 
 import { AuthService } from '../../core/services/auth.service';
 import { LocaleService } from '../../core/services/locale.service';
@@ -514,45 +515,152 @@ export class WorkloadListComponent {
     this.page.set(1);
   }
 
-  exportCsv(): void {
-    const ids = this.accountIdFilter();
-    const filters: WorkloadEntryFilters = {
-      accountId: ids.length > 0 ? ids : undefined,
-      dateFrom: this.dateFrom() || undefined,
-      dateTo: this.dateTo() || undefined,
-      projectId: this.projectIdFilter() ?? undefined,
-      activityTypeId: this.activityTypeIdFilter() ?? undefined,
-      taskTypeId: this.taskTypeIdFilter() ?? undefined,
-      status: (this.statusFilter() || undefined) as WorkloadEntryFilters['status'],
-      complexity: (this.complexityFilter() || undefined) as WorkloadEntryFilters['complexity'],
-      search: this.search().trim() || undefined,
-    };
+  async exportExcel(): Promise<void> {
+    // Export the full filtered set (entries() holds all matching rows), with
+    // human-readable names instead of ids + in-cell dropdowns. Workers' set is
+    // already own-only.
+    const rows = this.entries();
+    if (rows.length === 0) return;
 
-    // The export endpoint requires the auth header, so fetch as a blob and download.
-    const url = this.api.exportUrl(filters);
-    const token = this.auth.getToken();
-    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Export failed: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = `workload-export-${this.today}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(objectUrl);
-        this.flashToast(
-          this.localeSvc.t('workload_list.csv_done', { count: this.total() }),
-          'success',
-        );
-      })
-      .catch(() => {
-        this.flashToast(this.localeSvc.t('workload_list.csv_failed'), 'error');
+    const GREEN = 'FF76933C';
+
+    const wb = new Workbook();
+    const ws = wb.addWorksheet('Workload');
+    ws.columns = [
+      { key: 'user', width: 36 },
+      { key: 'date', width: 16 },
+      { key: 'activity', width: 30 },
+      { key: 'category', width: 30 },
+      { key: 'project', width: 30 },
+      { key: 'description', width: 72 },
+      { key: 'status', width: 18 },
+      { key: 'complexity', width: 18 },
+      { key: 'hours', width: 10 },
+      { key: 'target', width: 12 },
+      { key: 'quantity', width: 10 },
+    ];
+    ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
+
+    // Center all texts (Description stays left + wrapped for readability).
+    ws.columns.forEach((c) => {
+      c.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    ws.getColumn('description').alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+
+    // Title row (row 1) — "SADC Workload {date range}", themed to match the headers.
+    ws.mergeCells('A1:K1');
+    const title = ws.getCell('A1');
+    title.value = `SADC Workload ${this.dateFrom()} – ${this.dateTo()}`;
+    title.font = { bold: true, size: 14, color: { argb: 'FF4F6228' } };
+    title.alignment = { vertical: 'middle', horizontal: 'center' };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC4D79B' } };
+    ws.getRow(1).height = 24;
+
+    // Column header row (row 2).
+    const headerRow = ws.addRow({
+      user: 'User', date: 'Date', activity: 'Activity', category: 'Category',
+      project: 'Project', description: 'Description', status: 'Status',
+      complexity: 'Complexity', hours: 'Hours', target: 'Target', quantity: 'Quantity',
+    });
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell({ includeEmpty: true }, (c) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+    });
+
+    // Mirror the listing's grouped table: one header row per user (name + total
+    // hours) with their entries as collapsible detail rows beneath it.
+    const groups = new Map<string, WorkloadEntry[]>();
+    for (const e of rows) {
+      const name = this.users.nameFor(e.accountId);
+      const g = groups.get(name);
+      if (g) g.push(e);
+      else groups.set(name, [e]);
+    }
+    const userNames = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b, 'tr'));
+
+    const detailRowNumbers: number[] = [];
+    for (const name of userNames) {
+      const entries = groups
+        .get(name)!
+        .slice()
+        .sort((a, b) => a.workDate.localeCompare(b.workDate));
+      const total = entries.reduce((s, e) => s + (parseFloat(e.hoursSpent) || 0), 0);
+
+      // Group header row: name + total (like the listing's main row).
+      const gh = ws.addRow({
+        user: name,
+        description: `${entries.length} entries`,
+        hours: Math.round(total * 100) / 100,
+        target: this.expectedHours(),
       });
+      gh.outlineLevel = 0;
+      gh.eachCell({ includeEmpty: true }, (c) => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+      });
+
+      // Detail rows (User left blank — it's shown in the group header).
+      for (const e of entries) {
+        const row = ws.addRow({
+          date: e.workDate,
+          activity: this.activityName(e.activityTypeId),
+          category: this.categoryFor(e)?.name ?? '',
+          project: this.projectName(e.projectId),
+          description: e.taskDescription,
+          status: e.status,
+          complexity: e.complexity,
+          hours: parseFloat(e.hoursSpent) || 0,
+          quantity: e.quantity ?? '',
+        });
+        row.outlineLevel = 1;
+        row.eachCell({ includeEmpty: true }, (c) => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEBF1DE' } };
+        });
+        detailRowNumbers.push(row.number);
+      }
+    }
+
+    // In-cell dropdowns on the detail rows (constrained-value columns).
+    const distinct = (fn: (e: WorkloadEntry) => string | null | undefined): string[] =>
+      Array.from(new Set(rows.map(fn).filter((v): v is string => !!v))).sort((a, b) =>
+        a.localeCompare(b, 'tr'),
+      );
+    const activityList = distinct((e) => this.activityName(e.activityTypeId));
+    const categoryList = distinct((e) => this.categoryFor(e)?.name);
+    const projectList = distinct((e) => this.projectName(e.projectId));
+
+    const lists = wb.addWorksheet('Lists');
+    lists.state = 'veryHidden';
+    const fill = (col: string, arr: string[]) =>
+      arr.forEach((v, i) => {
+        lists.getCell(`${col}${i + 1}`).value = v;
+      });
+    fill('A', activityList);
+    fill('B', categoryList);
+    fill('C', projectList);
+
+    const ref = (col: string, n: number) => [`Lists!$${col}$1:$${col}$${Math.max(n, 1)}`];
+    for (const rn of detailRowNumbers) {
+      ws.getCell(`C${rn}`).dataValidation = { type: 'list', allowBlank: true, formulae: ref('A', activityList.length) };
+      ws.getCell(`D${rn}`).dataValidation = { type: 'list', allowBlank: true, formulae: ref('B', categoryList.length) };
+      ws.getCell(`E${rn}`).dataValidation = { type: 'list', allowBlank: true, formulae: ref('C', projectList.length) };
+      ws.getCell(`G${rn}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"ongoing,completed,blocked"'] };
+      ws.getCell(`H${rn}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"low,medium,high"'] };
+    }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workload-export-${this.today}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.flashToast(this.localeSvc.t('workload_list.csv_done', { count: rows.length }), 'success');
   }
 
   askDelete(id: number): void {

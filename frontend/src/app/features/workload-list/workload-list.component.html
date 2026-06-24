@@ -21,7 +21,7 @@
         class="btn-export"
         type="button"
         [disabled]="total() === 0"
-        (click)="exportCsv()"
+        (click)="exportExcel()"
       >
         <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
         {{ 'workload_list.btn_csv' | t : { count: total() } }}

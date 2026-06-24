@@ -124,6 +124,15 @@
   color: var(--c-text-primary); font-size: 13px; outline: none; font-family: inherit;
 }
 .input-wrap input:focus { border-color: var(--c-border-focus); }
+.input-wrap input.has-toggle { padding-right: 38px; }
+.pwd-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0;
+  background: transparent; border: none; border-radius: 5px;
+  color: var(--c-text-muted); cursor: pointer;
+}
+.pwd-toggle:hover { color: var(--c-text-primary); }
 
 /* --- error --- */
 .error {

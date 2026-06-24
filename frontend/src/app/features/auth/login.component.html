@@ -50,13 +50,23 @@
           <div class="input-wrap">
             <lucide-icon [img]="icons.Lock" size="14" class="icon-left"></lucide-icon>
             <input
-              type="password"
+              [type]="showPassword() ? 'text' : 'password'"
               [ngModel]="password()"
               (ngModelChange)="password.set($event)"
               name="password"
               autocomplete="current-password"
+              class="has-toggle"
               [placeholder]="'login.password_placeholder' | t"
             />
+            <button
+              type="button"
+              class="pwd-toggle"
+              (click)="togglePassword()"
+              [attr.aria-label]="(showPassword() ? 'login.hide_password' : 'login.show_password') | t"
+              [title]="(showPassword() ? 'login.hide_password' : 'login.show_password') | t"
+            >
+              <lucide-icon [img]="showPassword() ? icons.EyeOff : icons.Eye" size="14"></lucide-icon>
+            </button>
           </div>
         </div>
 

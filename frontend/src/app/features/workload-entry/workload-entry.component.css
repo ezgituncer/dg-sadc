@@ -42,11 +42,27 @@
   font-family: inherit; color-scheme: dark; padding: 0;
 }
 .btn-today {
+  display: inline-flex; align-items: center; gap: 5px;
   padding: 6px 12px; background: transparent;
   border: 1px solid var(--c-border); border-radius: 5px;
   color: var(--c-text-secondary); font-size: 11px; cursor: pointer;
   font-family: inherit;
 }
+.date-actions { display: flex; align-items: center; gap: 8px; }
+.btn-back {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.45); border-radius: 5px;
+  color: var(--c-teal); font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.btn-back:hover { background: rgba(45, 212, 191, 0.22); }
+.btn-reset-form {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; background: transparent;
+  border: 1px solid var(--c-border); border-radius: 5px;
+  color: var(--c-text-secondary); font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.btn-reset-form:hover { color: var(--c-text-primary); border-color: var(--c-border-hover); }
 
 /* --- Banners --- */
 .banner {

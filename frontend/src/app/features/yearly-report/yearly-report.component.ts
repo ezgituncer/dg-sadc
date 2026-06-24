@@ -26,6 +26,8 @@ import {
   ChevronRight,
 } from 'lucide-angular';
 
+import { Workbook } from 'exceljs';
+
 import { AuthService } from '../../core/services/auth.service';
 import { LocaleService } from '../../core/services/locale.service';
 import { LookupService } from '../../core/services/lookup.service';
@@ -422,72 +424,136 @@ export class YearlyReportComponent {
     });
   }
 
-  // --- CSV export (client-side) ---
-  exportCsv(): void {
+  // --- Excel export (client-side, themed like the listing export) ---
+  async exportExcel(): Promise<void> {
     const r = this.report();
     const rows = this.visibleRows();
     if (!r || rows.length === 0) return;
 
+    const GREEN = 'FF76933C';
+    const DETAIL_BG = 'FFEBF1DE';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const target = this.yearTargetTotal();
-    const headerRow1 = ['Yearly Report', String(r.year)];
-    const headerRow3 = [
-      'Kullanıcı', 'Account ID', 'Takım',
-      ...TR_MONTHS_FULL,
-      'Yıllık Toplam', 'Hedef (saat)', 'Doluluk %',
+    const round1 = (n: number) => Math.round(n * 10) / 10;
+    // Mirror the on-screen matrix cell: big percentage + (hours) — or "—" if empty.
+    const monthCell = (hStr: string, i: number): string => {
+      const h = parseFloat(hStr) || 0;
+      return h > 0 ? `${this.monthPct(h, i)}% (${round1(h)}h)` : '—';
+    };
+    const totalCell = (h: number): string => (h > 0 ? `${this.yearPct(h)}% (${round1(h)}h)` : '—');
+    const colLetter = (n: number) => {
+      let s = '';
+      while (n > 0) {
+        const m = (n - 1) % 26;
+        s = String.fromCharCode(65 + m) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    };
+
+    const wb = new Workbook();
+    const ws = wb.addWorksheet(`${r.year}`);
+    ws.columns = [
+      { key: 'user', width: 30 },
+      { key: 'team', width: 16 },
+      ...months.map((_, i) => ({ key: `m${i}`, width: 16 })),
+      { key: 'total', width: 16 },
+      { key: 'target', width: 12 },
     ];
-    const expectedRow = [
-      '', '', 'Working days →',
-      ...r.expectedWorkingDays.map((d) => `${d} gün`),
-      `${r.expectedWorkingDays.reduce((s, d) => s + d, 0)} gün`,
-      `${target}h`,
-      '',
-    ];
-    const dataRows: (string | number)[][] = [];
+    const lastCol = colLetter(ws.columns.length); // user + team + 12 months + total + target
+    ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
+    ws.columns.forEach((c) => {
+      c.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    ws.getColumn('user').alignment = { vertical: 'middle', horizontal: 'left' };
+
+    // Title row.
+    ws.mergeCells(`A1:${lastCol}1`);
+    const title = ws.getCell('A1');
+    title.value = `SADC Yearly Report ${r.year}`;
+    title.font = { bold: true, size: 14, color: { argb: 'FF4F6228' } };
+    title.alignment = { vertical: 'middle', horizontal: 'center' };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC4D79B' } };
+    ws.getRow(1).height = 24;
+
+    // Column header row.
+    const headerVals: Record<string, string> = {
+      user: 'User', team: 'Team', total: 'Total', target: 'Target',
+    };
+    months.forEach((m, i) => (headerVals[`m${i}`] = m));
+    const headerRow = ws.addRow(headerVals);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell({ includeEmpty: true }, (c) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+    });
+
+    // Expected working-days info row (days per month).
+    const expVals: Record<string, string | number> = { user: 'Working days', team: '' };
+    r.expectedWorkingDays.forEach((d, i) => (expVals[`m${i}`] = d));
+    expVals['total'] = r.expectedWorkingDays.reduce((s, d) => s + d, 0);
+    expVals['target'] = '';
+    const expRow = ws.addRow(expVals);
+    expRow.font = { italic: true, color: { argb: 'FF888888' } };
+
+    // Target working-hours info row (days × 8) right beneath.
+    const hoursVals: Record<string, string | number> = { user: 'Working hours', team: '' };
+    r.expectedWorkingDays.forEach((d, i) => (hoursVals[`m${i}`] = d * 8));
+    hoursVals['total'] = target;
+    hoursVals['target'] = target;
+    const hoursRow = ws.addRow(hoursVals);
+    hoursRow.font = { italic: true, color: { argb: 'FF888888' } };
+
+    // Per-user group header + collapsible activity breakdown.
     rows.forEach((row) => {
       const total = parseFloat(row.yearTotal);
-      const pct = target > 0 ? Math.round((total / target) * 100) : 0;
-      dataRows.push([
-        row.user.name,
-        row.user.accountId,
-        row.user.team ?? '',
-        ...row.hoursByMonth.map((h) => parseFloat(h).toFixed(1)),
-        total.toFixed(1),
-        target,
-        `${pct}%`,
-      ]);
-      // Activity breakdown rows
-      Object.entries(row.breakdownByActivity).forEach(([actId, months]) => {
-        const aTotal = months.reduce((s, h) => s + parseFloat(h), 0);
+      const ghVals: Record<string, string | number> = {
+        user: row.user.name, team: row.user.team ?? '',
+        total: totalCell(total), target,
+      };
+      row.hoursByMonth.forEach((h, i) => (ghVals[`m${i}`] = monthCell(h, i)));
+      const gh = ws.addRow(ghVals);
+      gh.outlineLevel = 0;
+      gh.eachCell({ includeEmpty: true }, (c) => {
+        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+      });
+
+      Object.entries(row.breakdownByActivity).forEach(([actId, mArr]) => {
+        const aTotal = mArr.reduce((s, h) => s + parseFloat(h), 0);
         if (aTotal === 0) return;
-        dataRows.push([
-          `   └─ ${this.activityName(actId)}`,
-          '', '',
-          ...months.map((h) => (parseFloat(h) > 0 ? parseFloat(h).toFixed(1) : '')),
-          aTotal.toFixed(1),
-          '',
-          '',
-        ]);
+        const dVals: Record<string, string | number> = {
+          user: `   ${this.activityName(actId)}`, team: '', total: totalCell(aTotal), target: '',
+        };
+        mArr.forEach((h, i) => (dVals[`m${i}`] = monthCell(h, i)));
+        const dr = ws.addRow(dVals);
+        dr.outlineLevel = 1;
+        dr.eachCell({ includeEmpty: true }, (c) => {
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DETAIL_BG } };
+        });
       });
     });
-    const footerRow: (string | number)[] = [
-      'Şirket toplamı', '', '',
-      ...this.columnTotals().map((h) => h.toFixed(1)),
-      this.grandTotal().toFixed(1),
-      target * this.userCount(),
-      target > 0 && this.userCount() > 0
-        ? `${Math.round((this.grandTotal() / (target * this.userCount())) * 100)}%`
-        : '0%',
-    ];
 
-    const all = [headerRow1, [], headerRow3, expectedRow, ...dataRows, [], footerRow];
-    const csv = all
-      .map((row) => row.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    // Company-total footer.
+    const footVals: Record<string, string | number> = {
+      user: 'Company total', team: '',
+      total: `${round1(this.grandTotal())}h`,
+      target: target * this.userCount(),
+    };
+    this.columnTotals().forEach((h, i) => (footVals[`m${i}`] = h > 0 ? `${round1(h)}h` : '—'));
+    const foot = ws.addRow(footVals);
+    foot.font = { bold: true };
+    foot.eachCell({ includeEmpty: true }, (c) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAF0DD' } };
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `yearly-report-${r.year}.csv`;
+    a.download = `yearly-report-${r.year}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

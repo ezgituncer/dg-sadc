@@ -13,7 +13,7 @@
         class="btn-export"
         type="button"
         [disabled]="userCount() === 0"
-        (click)="exportCsv()"
+        (click)="exportExcel()"
       >
         <lucide-icon [img]="icons.Save" size="12"></lucide-icon>
         {{ 'common.export_excel' | t }}

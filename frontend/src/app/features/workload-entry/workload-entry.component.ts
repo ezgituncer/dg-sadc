@@ -24,6 +24,7 @@ import {
   Plus,
   Save,
   Trash2,
+  ArrowLeft,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -91,7 +92,7 @@ export class WorkloadEntryComponent {
 
   readonly icons = {
     Calendar, AlertCircle, Edit2, Activity, Tag, FolderOpen, Layers,
-    Clock, FileText, Hash, Plus, Save, Trash2,
+    Clock, FileText, Hash, Plus, Save, Trash2, ArrowLeft,
   };
 
   readonly today = isoToday();
@@ -189,11 +190,12 @@ export class WorkloadEntryComponent {
 
 
   setDate(value: string): void {
+    // Keep the form intact when switching days — only the selected date changes.
     this.date.set(value);
-    this.resetForm();
   }
 
   goToday(): void {
+    // Jump the selected day to today without touching the form fields.
     this.setDate(this.today);
   }
 

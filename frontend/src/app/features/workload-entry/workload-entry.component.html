@@ -19,9 +19,14 @@
             class="date-input"
           />
         </div>
-        @if (date() !== today) {
-          <button type="button" class="btn-today" (click)="goToday()">{{ 'workload_entry.btn_today' | t }}</button>
-        }
+        <div class="date-actions">
+          @if (date() !== today) {
+            <button type="button" class="btn-today" (click)="goToday()">
+              <lucide-icon [img]="icons.ArrowLeft" size="13"></lucide-icon>
+              {{ 'workload_entry.btn_today' | t }}
+            </button>
+          }
+        </div>
       </div>
 
       @if (dateLocked()) {

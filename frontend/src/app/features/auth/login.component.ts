@@ -8,6 +8,8 @@ import {
   Loader2,
   Lock,
   User as UserIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-angular';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -37,10 +39,11 @@ export class LoginComponent {
 
   readonly showSeedHint = environment.showSeedAccountsHint;
 
-  readonly icons = { UserIcon, Lock, AlertCircle, Loader2 };
+  readonly icons = { UserIcon, Lock, AlertCircle, Loader2, Eye, EyeOff };
 
   readonly accountId = signal('');
   readonly password = signal('');
+  readonly showPassword = signal(false);
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly hintOpen = signal(false);
@@ -85,5 +88,9 @@ export class LoginComponent {
 
   toggleHint(): void {
     this.hintOpen.update((v) => !v);
+  }
+
+  togglePassword(): void {
+    this.showPassword.update((v) => !v);
   }
 }
