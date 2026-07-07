@@ -1,0 +1,86 @@
+
+The first version of the Working Day Planner module is ready for testing.
+It is a yearly work-day / holiday planning tool: the user marks days on the
+calendar (work / half day / off), can add a note, and sees the net working
+days count live.
+
+How to open:
+- Open the file directly in a browser, OR
+- In the folder: python -m http.server 8000 -> http://localhost:8000
+
+Test scenarios:
+1. Click a day -> a popover opens; select Work / Half day / Off, enter a note,
+   and Save. (It should also close with Esc / clicking outside.)
+2. Do the net working days counter and monthly totals update instantly?
+   (half day = 0.5)
+3. Weekends (Sat-Sun) are off by default; a holiday marked on a weekday should
+   appear in red.
+4. Do days with a note show a corner dot + hover tooltip?
+5. Year selector (< 2026 >) - does the calendar rebuild when the year changes?
+6. Download CSV -> are all days, statuses and notes in the file?
+   (Excel-TR: ";" separated, UTF-8 BOM)
+7. Responsive: does the column count drop 4 -> 3 -> 2 -> 1 as the window narrows?
+
+Known limitations (do not report as bugs):
+- No persistence - marks are lost on page refresh (intentional).
+- Weekend policy is fixed to Sat+Sun (the selector UI was removed).
+- Official holidays are not auto-filled.
+
+Environment: latest Chrome/Edge/Firefox. Please report any bugs with a
+screenshot + steps to reproduce.
+
+----------------------------------------------------------------------
+
+OTHER CHANGES IN THIS BUILD (besides the Working Day planner page)
+
+The same commit also touched a few other areas - please regression-test
+these as well:
+
+1. Workload list - filters reworked
+   - Removed the Task Type, Status, Complexity and free-text Search filters.
+   - Added a Team filter and a Category filter.
+   - The Project dropdown is now disabled (and cleared) when the selected
+     Activity Type is not "Project".
+   - The Category filter resets automatically when the Activity Type changes
+     (categories are scoped to the activity type).
+   Test: apply/clear each filter, switch activity types, confirm the
+   project/category dropdowns enable/reset correctly and the active-filter
+   count is right.
+
+2. Team filter on backend endpoints
+   - Workload list, export and aggregates endpoints now accept a team_id
+     filter (scopes results to the accounts on that team).
+   Test: filtering by team returns only that team's entries in the table,
+   the CSV export and the KPI/aggregate numbers.
+
+3. Permissions - working-days editing restricted (new requirement)
+   - Manager and Tech Lead can no longer edit working days (report is now
+     read-only for them). Only Admin and QA Specialist can edit.
+     Note: this is an intentional new requirement, not a bug.
+   Test: log in as Manager/Tech Lead -> no edit access to working days;
+   as Admin/QA -> editing works.
+
+4. Yearly report - old inline working-days editor removed
+   - The "Edit/View days" button and its popup editor were removed from the
+     Yearly Report screen (editing now lives in the new planner page).
+   Test: yearly report still loads, colors and Excel export work; the old
+   edit button is gone.
+
+5. My Workload calendar - holiday/leave awareness
+   - Calendar cells now reflect planner marks: holidays/leave shown in a
+     distinct color, half-days use a half-day target, notes appear on the
+     cell with a tooltip.
+   Test: mark a holiday/half-day/leave in the planner, then check the
+   My Workload calendar reflects the color, note and target.
+
+6. Workload entry - holiday confirmation
+   - Logging a new entry on a day marked as a holiday/leave (or a weekend)
+     now shows a confirmation dialog first.
+   Test: try to log work on a marked holiday/weekend -> confirm dialog
+   appears; confirming saves, cancelling does not.
+
+7. Half-day support in working-days data model
+   - Expected working days now allow fractional values (e.g. 21.5) so
+     half-days flow into monthly net totals and the yearly report target.
+   Test: a month containing half-days shows a fractional net/target
+   without rounding errors.
